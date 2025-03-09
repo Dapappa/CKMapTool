@@ -213,55 +213,55 @@
     const zoneModal = document.querySelector(".zone-modal");
     const closeButton = document.querySelector(".close-button");
 
-    // Define image paths with correct folder structure
+    // Define image paths with exact filenames from the repository
     const zoneImageMap = {
       NorthWestAreaA: [
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/north-west-area-a.jpg",
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/north-west-area-a-2.jpg",
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/north-west-area-a-3.jpg",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/north-west-area-a.jpg",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/north-west-area-a-2.jpg",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/north-west-area-a-3.jpg",
       ],
       NorthWestAreaB: [
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/Northwest Calgary Distribution Map (3)-1.png",
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/Northwest Calgary Distribution Map (3)-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Northwest%20Calgary%20Distribution%20Map%20(3)-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Northwest%20Calgary%20Distribution%20Map%20(3)-2.png",
       ],
       NorthWestAreaC: [
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/Northwest Calgary Distribution Map (3)-3.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Northwest%20Calgary%20Distribution%20Map%20(3)-3.png",
       ],
       NorthEastAreaA: [
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/North East-1.png",
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/North East-2.png",
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/North East-3.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/North%20East-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/North%20East-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/North%20East-3.png",
       ],
       NorthEastAreaB: [
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/North East-1.png",
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/North East-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/North%20East-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/North%20East-2.png",
       ],
       NorthEastAreaC: [
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/North East-3.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/North%20East-3.png",
       ],
       DowntownAreaA: [
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/Downtown Calgary Map (1)-1.png",
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/Downtown Calgary Map (1)-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Downtown%20Calgary%20Map%20(1)-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Downtown%20Calgary%20Map%20(1)-2.png",
       ],
       DowntownAreaB: [
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/Downtown Calgary Map (1)-1.png",
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/Downtown Calgary Map (1)-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Downtown%20Calgary%20Map%20(1)-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Downtown%20Calgary%20Map%20(1)-2.png",
       ],
       SouthEastAreaA: [
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/South East Completed (2)-1.png",
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/South East Completed (2)-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/South%20East%20Completed%20(2)-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/South%20East%20Completed%20(2)-2.png",
       ],
       SouthEastAreaB: [
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/South East Completed (2)-1.png",
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/South East Completed (2)-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/South%20East%20Completed%20(2)-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/South%20East%20Completed%20(2)-2.png",
       ],
       SouthWestAreaA: [
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/Southwest Map (2)-1.png",
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/Southwest Map (2)-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Southwest%20Map%20(2)-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Southwest%20Map%20(2)-2.png",
       ],
       SouthWestAreaB: [
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/Southwest Map (2)-1.png",
-        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/map-images/Southwest Map (2)-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Southwest%20Map%20(2)-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Southwest%20Map%20(2)-2.png",
       ],
     };
 
@@ -314,17 +314,9 @@
 
               img.onerror = function () {
                 console.error("❌ Failed to load image:", imageSrc);
-                // Try without map-images folder as a fallback
-                const fallbackSrc = imageSrc.replace("/map-images/", "/");
-                console.log("Trying fallback path:", fallbackSrc);
-                this.src = fallbackSrc;
-
-                // Handle fallback error
-                this.onerror = function () {
-                  console.error("❌ Fallback image also failed:", fallbackSrc);
-                  this.src =
-                    "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
-                };
+                // No need to try alternate path, just show error icon
+                this.src =
+                  "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
               };
 
               sliderContainer.appendChild(img);
@@ -387,17 +379,9 @@
 
           img.onerror = function () {
             console.error("Failed to load previous image:", newSrc);
-            // Try without map-images folder as a fallback
-            const fallbackSrc = newSrc.replace("/map-images/", "/");
-            console.log("Trying fallback path:", fallbackSrc);
-            this.src = fallbackSrc;
-
-            // Handle fallback error
-            this.onerror = function () {
-              console.error("Fallback image also failed");
-              this.src =
-                "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
-            };
+            // No need to try alternate path, just show error icon
+            this.src =
+              "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
           };
 
           img.src = newSrc;
@@ -426,17 +410,9 @@
 
           img.onerror = function () {
             console.error("Failed to load next image:", newSrc);
-            // Try without map-images folder as a fallback
-            const fallbackSrc = newSrc.replace("/map-images/", "/");
-            console.log("Trying fallback path:", fallbackSrc);
-            this.src = fallbackSrc;
-
-            // Handle fallback error
-            this.onerror = function () {
-              console.error("Fallback image also failed");
-              this.src =
-                "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
-            };
+            // No need to try alternate path, just show error icon
+            this.src =
+              "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
           };
 
           img.src = newSrc;
