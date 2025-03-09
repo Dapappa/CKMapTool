@@ -229,8 +229,12 @@
       SouthWestAreaB: "Southwest Map (2)-2.png",
     };
 
-    // Base URL for images
+    // Base URL for images - ensure we're loading from the project root
     const imageBaseURL = "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/";
+
+    // Store all zone titles for navigation
+    const zoneTitles = Object.keys(zoneImageMap);
+    let currentZoneIndex = 0;
 
     // Helper function to format zone titles for display
     function formatZoneTitle(title) {
@@ -253,27 +257,44 @@
           const zoneTitle = this.getAttribute("title");
           console.log("Clicked zone:", zoneTitle);
 
-          // Set modal title
-          document.querySelector(".modal-title").textContent =
-            formatZoneTitle(zoneTitle);
+          // Find the index of this zone in our array for navigation
+          currentZoneIndex = zoneTitles.indexOf(zoneTitle);
 
-          // Clear previous images
-          const sliderContainer = document.querySelector(".slider-container");
-          sliderContainer.innerHTML = "";
-
-          // Add images if available for this zone
-          if (zoneImageMap[zoneTitle]) {
-            const img = document.createElement("img");
-            img.src = imageBaseURL + zoneImageMap[zoneTitle];
-            img.alt = formatZoneTitle(zoneTitle);
-            img.className = "active";
-            sliderContainer.appendChild(img);
-          }
-
-          // Show modal
-          zoneModal.classList.add("active");
+          // Show the zone image
+          showZoneImage(zoneTitle);
         });
       });
+
+      // Function to display a zone's image
+      function showZoneImage(zoneTitle) {
+        // Set modal title
+        document.querySelector(".modal-title").textContent =
+          formatZoneTitle(zoneTitle);
+
+        // Clear previous images
+        const sliderContainer = document.querySelector(".slider-container");
+        sliderContainer.innerHTML = "";
+
+        // Add image if available for this zone
+        if (zoneImageMap[zoneTitle]) {
+          const img = document.createElement("img");
+          img.src = imageBaseURL + zoneImageMap[zoneTitle];
+          img.alt = formatZoneTitle(zoneTitle);
+          img.className = "active";
+
+          // Add error handling for image loading
+          img.onerror = function () {
+            console.error(`Failed to load image: ${img.src}`);
+            this.src =
+              "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='150'><rect width='200' height='150' fill='%23f1f1f1'/><text x='100' y='75' text-anchor='middle' fill='%23999'>Image not found</text></svg>";
+          };
+
+          sliderContainer.appendChild(img);
+        }
+
+        // Show modal
+        zoneModal.classList.add("active");
+      }
 
       // Close button
       closeButton.addEventListener("click", function () {
@@ -284,16 +305,19 @@
       const prevButton = document.querySelector(".prev-button");
       const nextButton = document.querySelector(".next-button");
 
-      // Hide navigation buttons since we only have one image per zone
-      prevButton.style.display = "none";
-      nextButton.style.display = "none";
+      // Enable navigation buttons to slide between regions
+      prevButton.style.display = "block";
+      nextButton.style.display = "block";
 
       prevButton.addEventListener("click", function () {
-        // Not needed since we only have one image per zone
+        currentZoneIndex =
+          (currentZoneIndex - 1 + zoneTitles.length) % zoneTitles.length;
+        showZoneImage(zoneTitles[currentZoneIndex]);
       });
 
       nextButton.addEventListener("click", function () {
-        // Not needed since we only have one image per zone
+        currentZoneIndex = (currentZoneIndex + 1) % zoneTitles.length;
+        showZoneImage(zoneTitles[currentZoneIndex]);
       });
 
       window.mapInitialized = true;
