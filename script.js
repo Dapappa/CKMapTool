@@ -21,47 +21,92 @@ document.addEventListener('DOMContentLoaded', function() {
     mapWrapper.appendChild(mapOverlay);
 
     // Variables
+    let allZones = [];               // All zones (title + array of images)
+    let zoneHighlights = {};         // Stores SVG overlays
+    let autoCycleInterval = null;    // For random highlight cycling
+    let userInteracted = false;      // True after user clicks/taps
+    let lastClickedZone = null;      // Track two-tap logic
+    let isFirstTap = true;           // Two-tap logic for mobile
+    let isMobile = (window.innerWidth <= 768);
+
+    // Current zone + index of the image within that zone
     let currentZoneIndex = 0;
-    let allZones = [];
-    let zoneHighlights = {};
-    let autoCycleInterval = null;
-    let userInteracted = false;
-    let lastClickedZone = null;
-    let isFirstTap = true;
-    let isMobile = window.innerWidth <= 768;
-    
-    // Map of zone titles to actual image files in map-images directory
-    // Each area has one primary image
+    let currentImageIndex = 0;
+
+    /**********************************************************
+     * 1) Multi-Image Arrays for Each Zone (Root-Level Files)
+     **********************************************************/
     const zoneImageMap = {
-        // Northwest zones
-        'NorthWestAreaA': 'Northwest Calgary Distribution Map (3)-1.png',
-        'NorthWestAreaB': 'Northwest Calgary Distribution Map (3)-2.png',
-        'NorthWestAreaC': 'Northwest Calgary Distribution Map (3)-3.png',
-        
-        // Northeast zones
-        'NorthEastAreaA': 'North East-1.png',
-        'NorthEastAreaB': 'North East-2.png',
-        'NorthEastAreaC': 'North East-3.png',
-        
-        // Downtown zones
-        'DowntownAreaA': 'Downtown Calgary Map (1)-1.png',
-        'DowntownAreaB': 'Downtown Calgary Map (1)-2.png',
-        
-        // Southeast zones
-        'SouthEastAreaA': 'South East Completed (2)-1.png',
-        'SouthEastAreaB': 'South East Completed (2)-2.png',
-        
-        // Southwest zones
-        'SouthWestAreaA': 'Southwest Map (2)-1.png',
-        'SouthWestAreaB': 'Southwest Map (2)-2.png'
+      // ========== NorthWest ==========
+      'NorthWestAreaA': [
+        'north-west-area-a.jpg',
+        'north-west-area-a-2.jpg',
+        'north-west-area-a-3.jpg'
+      ],
+      'NorthWestAreaB': [
+        'Northwest Calgary Distribution Map (3)-1.png',
+        'Northwest Calgary Distribution Map (3)-2.png'
+      ],
+      'NorthWestAreaC': [
+        'Northwest Calgary Distribution Map (3)-3.png'
+      ],
+
+      // ========== NorthEast ==========
+      'NorthEastAreaA': [
+        'North East-1.png',
+        'North East-2.png',
+        'North East-3.png'
+      ],
+      'NorthEastAreaB': [
+        'North East-1.png',
+        'North East-2.png'
+      ],
+      'NorthEastAreaC': [
+        'North East-3.png'
+      ],
+
+      // ========== Downtown ==========
+      'DowntownAreaA': [
+        'Downtown Calgary Map (1)-1.png',
+        'Downtown Calgary Map (1)-2.png'
+      ],
+      'DowntownAreaB': [
+        'Downtown Calgary Map (1)-1.png',
+        'Downtown Calgary Map (1)-2.png'
+      ],
+
+      // ========== SouthEast ==========
+      'SouthEastAreaA': [
+        'South East Completed (2)-1.png',
+        'South East Completed (2)-2.png'
+      ],
+      'SouthEastAreaB': [
+        'South East Completed (2)-1.png',
+        'South East Completed (2)-2.png'
+      ],
+
+      // ========== SouthWest ==========
+      'SouthWestAreaA': [
+        'Southwest Map (2)-1.png',
+        'Southwest Map (2)-2.png'
+      ],
+      'SouthWestAreaB': [
+        'Southwest Map (2)-1.png',
+        'Southwest Map (2)-2.png'
+      ]
     };
 
-    // Initialize the application
+    // The base URL for root-level images in your GitHub repo
+    const imageBaseURL = "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/";
+
+    /**********************************************************
+     * 2) Initialize
+     **********************************************************/
     function init() {
-        // Initialize basic components
+        // Build the zones array from <area> + zoneImageMap
         initializeZones();
-        
-        // Make sure map is loaded before creating highlights
+
+        // Once the map is loaded, create the polygon overlays
         if (mainMap.complete) {
             createAreaHighlights();
             updateAreaHighlights();
@@ -72,43 +117,37 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         }
         
-        // Add touch events for mobile devices
+        // Two-tap mobile
         setupTouchEvents();
         
-        // Fade out initial overlay after 5 seconds
+        // Hide the "Tap a region to explore" after 5s
         setTimeout(() => {
             initialOverlay.classList.add('hide');
         }, 5000);
         
-        // Start auto-cycling highlights
+        // Start random highlight cycling
         startAutoCycle();
         
-        // Stop auto-cycling when user interacts
+        // Stop auto-cycling on click
         document.addEventListener('click', () => {
             userInteracted = true;
             stopAutoCycle();
         });
         
-        // Handle window resize events
+        // Handle resizing
         let resizeTimer;
         window.addEventListener('resize', () => {
-            // Update mobile detection
-            isMobile = window.innerWidth <= 768;
-            
-            // Debounce resize events to improve performance
+            isMobile = (window.innerWidth <= 768);
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
                 updateAreaHighlights();
             }, 250);
         });
-        
-        // Trigger initial resize calculation
-        // This ensures coordinates are scaled correctly on first load
+
         setTimeout(() => {
             updateAreaHighlights();
         }, 500);
-        
-        // Update on orientation change (important for mobile)
+
         window.addEventListener('orientationchange', () => {
             setTimeout(() => {
                 updateAreaHighlights();
@@ -116,30 +155,131 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Setup touch events for more responsive mobile experience
+    /**********************************************************
+     * 3) Build Zones Array
+     **********************************************************/
+    function initializeZones() {
+        mapAreas.forEach(area => {
+            const title = area.getAttribute('title');
+            if (title && zoneImageMap[title]) {
+                // The zone has multiple images
+                allZones.push({
+                    title: title,
+                    imagePaths: zoneImageMap[title]
+                });
+            }
+        });
+    }
+
+    /**********************************************************
+     * 4) Create SVG Overlays
+     **********************************************************/
+    function createAreaHighlights() {
+        if (!mainMap.complete) {
+            mainMap.onload = createAreaHighlights;
+            return;
+        }
+        
+        mapAreas.forEach(area => {
+            if (area.getAttribute('shape') === 'poly') {
+                const coords = area.getAttribute('coords').split(',');
+                const title = area.getAttribute('title');
+
+                const svgNS = "http://www.w3.org/2000/svg";
+                const svg = document.createElementNS(svgNS, "svg");
+                svg.setAttribute('class', 'zone-highlight');
+                svg.setAttribute('data-zone', title);
+                Object.assign(svg.style, {
+                    position: 'absolute',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%'
+                });
+
+                const polygon = document.createElementNS(svgNS, "polygon");
+
+                const scaleX = mainMap.width / mainMap.naturalWidth;
+                const scaleY = mainMap.height / mainMap.naturalHeight;
+
+                let points = '';
+                for (let i = 0; i < coords.length; i += 2) {
+                    const x = parseFloat(coords[i]) * scaleX;
+                    const y = parseFloat(coords[i+1]) * scaleY;
+                    points += `${x},${y} `;
+                }
+                polygon.setAttribute('points', points.trim());
+                polygon.setAttribute('fill', '#3498db');
+                polygon.setAttribute('fill-opacity', '0.3');
+                polygon.setAttribute('stroke', '#2980b9');
+                polygon.setAttribute('stroke-width', '2');
+
+                svg.appendChild(polygon);
+                mapWrapper.appendChild(svg);
+
+                zoneHighlights[title] = svg;
+            }
+        });
+
+        window.addEventListener('resize', updateAreaHighlights);
+    }
+
+    /**********************************************************
+     * 5) Update Overlays on Resize
+     **********************************************************/
+    function updateAreaHighlights() {
+        const mapWidth = mainMap.width || mainMap.clientWidth || mainMap.offsetWidth;
+        const mapHeight = mainMap.height || mainMap.clientHeight || mainMap.offsetHeight;
+        const naturalWidth = mainMap.naturalWidth;
+        const naturalHeight = mainMap.naturalHeight;
+
+        const scaleX = mapWidth / naturalWidth;
+        const scaleY = mapHeight / naturalHeight;
+
+        mapAreas.forEach(area => {
+            if (area.getAttribute('shape') === 'poly') {
+                const coords = area.getAttribute('coords').split(',');
+                const title = area.getAttribute('title');
+                const svg = zoneHighlights[title];
+                if (svg) {
+                    const polygon = svg.querySelector('polygon');
+                    
+                    let points = '';
+                    for (let i = 0; i < coords.length; i += 2) {
+                        const x = parseFloat(coords[i]) * scaleX;
+                        const y = parseFloat(coords[i+1]) * scaleY;
+                        points += `${x},${y} `;
+                    }
+                    polygon.setAttribute('points', points.trim());
+                }
+
+                // Also update <area> coords for accurate click detection
+                let newCoords = '';
+                for (let i = 0; i < coords.length; i++) {
+                    const val = parseFloat(coords[i]);
+                    const newVal = (i % 2 === 0) ? val * scaleX : val * scaleY;
+                    newCoords += Math.round(newVal) + ',';
+                }
+                newCoords = newCoords.slice(0, -1);
+                area.setAttribute('coords', newCoords);
+            }
+        });
+    }
+
+    /**********************************************************
+     * 6) Two-Tap Logic for Mobile
+     **********************************************************/
     function setupTouchEvents() {
-        // Check if the device supports touch events
-        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints;
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         if (!isTouchDevice) return;
         
-        // Add touch event to the map wrapper
         mapWrapper.addEventListener('touchstart', function(e) {
-            // Prevent default behavior to avoid scrolling
             e.preventDefault();
-            
-            // Get the touch coordinates
             const touch = e.touches[0];
-            const touchX = touch.clientX;
-            const touchY = touch.clientY;
-            
-            // Get the map's position
             const rect = mapWrapper.getBoundingClientRect();
+            const relativeX = touch.clientX - rect.left;
+            const relativeY = touch.clientY - rect.top;
             
-            // Calculate relative touch position
-            const relativeX = touchX - rect.left;
-            const relativeY = touchY - rect.top;
-            
-            // Find which area was touched
             let touchedArea = null;
             mapAreas.forEach(area => {
                 if (area.getAttribute('shape') === 'poly') {
@@ -150,13 +290,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
             
-            // If an area was touched, simulate a click
             if (touchedArea) {
                 const title = touchedArea.getAttribute('title');
                 userInteracted = true;
                 stopAutoCycle();
-                
-                // Use the two-tap approach for mobile
+
                 if (isFirstTap) {
                     handleFirstTap(title);
                 } else if (title === lastClickedZone) {
@@ -169,13 +307,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }, { passive: false });
     }
 
-    // Check if a point is inside a polygon
     function isPointInPolygon(x, y, poly) {
         let inside = false;
         for (let i = 0, j = poly.length - 2; i < poly.length; j = i, i += 2) {
             const xi = poly[i], yi = poly[i + 1];
             const xj = poly[j], yj = poly[j + 1];
-            
             const intersect = ((yi > y) !== (yj > y)) && 
                 (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
             if (intersect) inside = !inside;
@@ -183,26 +319,25 @@ document.addEventListener('DOMContentLoaded', function() {
         return inside;
     }
 
-    // Start auto-cycling of highlights
+    /**********************************************************
+     * 7) Auto Highlight Cycle
+     **********************************************************/
     function startAutoCycle() {
         if (!userInteracted) {
             autoCycleInterval = setInterval(() => {
+                if (!allZones.length) return;
                 const randomIndex = Math.floor(Math.random() * allZones.length);
                 const randomZone = allZones[randomIndex];
-                
                 if (randomZone && zoneHighlights[randomZone.title]) {
-                    const highlight = zoneHighlights[randomZone.title];
-                    highlight.classList.add('auto-highlight');
-                    
+                    const hl = zoneHighlights[randomZone.title];
+                    hl.classList.add('auto-highlight');
                     setTimeout(() => {
-                        highlight.classList.remove('auto-highlight');
+                        hl.classList.remove('auto-highlight');
                     }, 800);
                 }
             }, 2000);
         }
     }
-
-    // Stop auto-cycling
     function stopAutoCycle() {
         if (autoCycleInterval) {
             clearInterval(autoCycleInterval);
@@ -210,407 +345,208 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Build the list of all zones from the map areas
-    function initializeZones() {
-        mapAreas.forEach(area => {
-            const title = area.getAttribute('title');
-            if (title && zoneImageMap[title]) {
-                allZones.push({
-                    title: title,
-                    imagePath: `${zoneImageMap[title]}`
-                });
-            }
-        });
-    }
-    
-    // Create SVG overlays for each area
-    function createAreaHighlights() {
-        if (!mainMap.complete) {
-            // If image is not loaded yet, wait for it
-            mainMap.onload = createAreaHighlights;
-            return;
-        }
-        
-        // Create a helper SVG for each area
-        mapAreas.forEach(area => {
-            if (area.getAttribute('shape') === 'poly') {
-                const coords = area.getAttribute('coords').split(',');
-                const title = area.getAttribute('title');
-                
-                // Create SVG element
-                const svgNS = "http://www.w3.org/2000/svg";
-                const svg = document.createElementNS(svgNS, "svg");
-                svg.setAttribute('class', 'zone-highlight');
-                svg.setAttribute('data-zone', title);
-                svg.style.position = 'absolute';
-                svg.style.top = '0';
-                svg.style.left = '0';
-                svg.style.width = '100%';
-                svg.style.height = '100%';
-                
-                // Create polygon
-                const polygon = document.createElementNS(svgNS, "polygon");
-                
-                // Scale coordinates based on natural vs displayed image size
-                const scaleX = mainMap.width / mainMap.naturalWidth;
-                const scaleY = mainMap.height / mainMap.naturalHeight;
-                
-                let points = '';
-                for (let i = 0; i < coords.length; i += 2) {
-                    const x = parseFloat(coords[i]) * scaleX;
-                    const y = parseFloat(coords[i+1]) * scaleY;
-                    points += `${x},${y} `;
-                }
-                
-                polygon.setAttribute('points', points.trim());
-                polygon.setAttribute('fill', '#3498db');
-                polygon.setAttribute('fill-opacity', '0.3');
-                polygon.setAttribute('stroke', '#2980b9');
-                polygon.setAttribute('stroke-width', '2');
-                
-                svg.appendChild(polygon);
-                mapWrapper.appendChild(svg);
-                
-                // Store for later use
-                zoneHighlights[title] = svg;
-            }
-        });
-        
-        // Add resize event listener to handle image scaling
-        window.addEventListener('resize', updateAreaHighlights);
-    }
-    
-    // Update positions of highlights on resize
-    function updateAreaHighlights() {
-        // Get current dimensions
-        const mapWidth = mainMap.width || mainMap.clientWidth || mainMap.offsetWidth;
-        const mapHeight = mainMap.height || mainMap.clientHeight || mainMap.offsetHeight;
-        
-        // Get natural dimensions (original size)
-        const naturalWidth = mainMap.naturalWidth;
-        const naturalHeight = mainMap.naturalHeight;
-        
-        // Calculate scaling factors
-        const scaleX = mapWidth / naturalWidth;
-        const scaleY = mapHeight / naturalHeight;
-        
-        mapAreas.forEach(area => {
-            if (area.getAttribute('shape') === 'poly') {
-                const coords = area.getAttribute('coords').split(',');
-                const title = area.getAttribute('title');
-                const svg = zoneHighlights[title];
-                
-                if (svg) {
-                    const polygon = svg.querySelector('polygon');
-                    
-                    let points = '';
-                    for (let i = 0; i < coords.length; i += 2) {
-                        const x = parseFloat(coords[i]) * scaleX;
-                        const y = parseFloat(coords[i+1]) * scaleY;
-                        points += `${x},${y} `;
-                    }
-                    
-                    polygon.setAttribute('points', points.trim());
-                }
-                
-                // Update the actual area coords for accurate clicking
-                let newCoords = '';
-                for (let i = 0; i < coords.length; i++) {
-                    const value = parseFloat(coords[i]);
-                    const newValue = i % 2 === 0 ? value * scaleX : value * scaleY;
-                    newCoords += Math.round(newValue) + ',';
-                }
-                newCoords = newCoords.slice(0, -1); // Remove trailing comma
-                
-                // Only update if significantly different to avoid constant small updates
-                const currentCoords = area.getAttribute('coords');
-                if (Math.abs(currentCoords.length - newCoords.length) > 10) {
-                    area.setAttribute('coords', newCoords);
-                }
-            }
-        });
-    }
-    
-    // Format zone title (e.g., "NorthWestAreaA" -> "North West Area A")
-    function formatZoneTitle(title) {
-        return title
-            // Insert space before capital letters
-            .replace(/([A-Z])/g, ' $1')
-            // Handle special case for first letter
-            .replace(/^./, function(str) { return str.toUpperCase(); })
-            // Trim any extra spaces
-            .trim();
-    }
-    
-    // Load and display the current zone
-    function showCurrentZone() {
-        if (allZones.length === 0) return;
-        
-        const currentZone = allZones[currentZoneIndex];
-        modalTitle.textContent = formatZoneTitle(currentZone.title);
-        
-        // Clear existing images
-        sliderContainer.innerHTML = '';
-        
-        // Create image element for the current zone
-        const img = document.createElement('img');
-        img.className = 'slider-image';
-        img.src = currentZone.imagePath;
-        img.alt = formatZoneTitle(currentZone.title);
-        
-        // Add fullscreen functionality on image click
-        img.addEventListener('click', function() {
-            showFullscreen(img.src, currentZone.title);
-        });
-        
-        // Add to slider with transition animation
-        img.classList.add('fade-transition');
-        sliderContainer.appendChild(img);
-    }
-    
-    // Show fullscreen image view
-    function showFullscreen(imageSrc, title) {
-        // Clear previous image
-        fullscreenImageContainer.innerHTML = '';
-        
-        // Create image element
-        const img = document.createElement('img');
-        img.src = imageSrc;
-        img.alt = formatZoneTitle(title);
-        
-        // Add to container
-        fullscreenImageContainer.appendChild(img);
-        
-        // Show fullscreen view
-        fullscreenView.classList.add('active');
-    }
-    
-    // Navigate to previous zone with transition
-    function previousZone() {
-        if (allZones.length === 0) return;
-        
-        currentZoneIndex = (currentZoneIndex - 1 + allZones.length) % allZones.length;
-        
-        // Apply transition
-        const oldImage = sliderContainer.querySelector('.slider-image');
-        if (oldImage) {
-            oldImage.classList.add('slide-in-left');
-            setTimeout(() => {
-                showCurrentZone();
-            }, 200);
-        } else {
-            showCurrentZone();
-        }
-    }
-    
-    // Navigate to next zone with transition
-    function nextZone() {
-        if (allZones.length === 0) return;
-        
-        currentZoneIndex = (currentZoneIndex + 1) % allZones.length;
-        
-        // Apply transition
-        const oldImage = sliderContainer.querySelector('.slider-image');
-        if (oldImage) {
-            oldImage.classList.add('slide-in-right');
-            setTimeout(() => {
-                showCurrentZone();
-            }, 200);
-        } else {
-            showCurrentZone();
-        }
-    }
-    
-    // Find zone index by title
-    function findZoneIndexByTitle(title) {
-        return allZones.findIndex(zone => zone.title === title);
-    }
-    
-    // Handle first tap/click on mobile (show label only)
+    /**********************************************************
+     * 8) Two-Tap: First Tap => highlight, second => open
+     **********************************************************/
     function handleFirstTap(title) {
         zoneLabel.textContent = formatZoneTitle(title);
         zoneLabel.classList.add('active');
         
-        // Keep highlight visible
         if (zoneHighlights[title]) {
-            const highlight = zoneHighlights[title];
-            highlight.style.opacity = '1';
-            highlight.style.transform = 'scale(1.01)';
+            zoneHighlights[title].style.opacity = '1';
+            zoneHighlights[title].style.transform = 'scale(1.01)';
         }
-        
-        // Store last clicked zone
         lastClickedZone = title;
         isFirstTap = false;
         
-        // Auto-reset after 3 seconds if no second tap
         setTimeout(() => {
             if (lastClickedZone === title) {
                 resetTapState();
             }
         }, 3000);
     }
-    
-    // Reset tap state
     function resetTapState() {
         zoneLabel.classList.remove('active');
-        
-        // Reset all highlights
-        Object.values(zoneHighlights).forEach(highlight => {
-            highlight.style.opacity = '0';
-            highlight.style.transform = 'scale(1)';
+        Object.values(zoneHighlights).forEach(hl => {
+            hl.style.opacity = '0';
+            hl.style.transform = 'scale(1)';
         });
-        
         lastClickedZone = null;
         isFirstTap = true;
-        
-        // Reset map overlay
         mapOverlay.style.opacity = '0';
     }
-    
-    // Event Listeners for hover effects
-    mapAreas.forEach(area => {
-        // Mouseover (hover) event - only for desktop
-        area.addEventListener('mouseover', function() {
-            // Skip if in mobile mode or a zone is already active
-            if (isMobile || lastClickedZone !== null) return;
-            
-            const title = this.getAttribute('title');
-            const formattedTitle = formatZoneTitle(title);
-            
-            // Show label and update content
-            zoneLabel.textContent = formattedTitle;
-            zoneLabel.style.opacity = '1';
-            
-            // Show zone highlight
-            if (zoneHighlights[title]) {
-                const highlight = zoneHighlights[title];
-                highlight.style.opacity = '1';
-                highlight.style.transform = 'scale(1.01)';
-            }
-            
-            // Dim rest of map
-            mapOverlay.style.opacity = '1';
-        });
-        
-        // Mouseout event - only for desktop
-        area.addEventListener('mouseout', function() {
-            // Skip if in mobile mode or a zone is already active
-            if (isMobile || lastClickedZone !== null) return;
-            
-            // Hide label
-            zoneLabel.style.opacity = '0';
-            
-            // Hide zone highlight
-            const title = this.getAttribute('title');
-            if (zoneHighlights[title]) {
-                const highlight = zoneHighlights[title];
-                highlight.style.opacity = '0';
-                highlight.style.transform = 'scale(1)';
-            }
-            
-            // Reset map overlay
-            mapOverlay.style.opacity = '0';
-        });
-        
-        // Click event
-        area.addEventListener('click', function(e) {
-            e.preventDefault();
-            userInteracted = true;
-            stopAutoCycle();
-            
-            const title = this.getAttribute('title');
-            
-            // First tap on mobile - just show the label
-            if (isMobile && isFirstTap) {
-                handleFirstTap(title);
-                return;
-            }
-            
-            // Second tap on mobile - open the modal (but only if same zone)
-            if (isMobile && !isFirstTap) {
-                if (title === lastClickedZone) {
-                    openZoneModal(title);
-                } else {
-                    // If tapping a different zone, treat as first tap
-                    resetTapState();
-                    handleFirstTap(title);
-                }
-                return;
-            }
-            
-            // Desktop behavior - open modal immediately
-            openZoneModal(title);
-        });
-    });
-    
-    // Open zone modal
+
+    /**********************************************************
+     * 9) Opening the Modal (Multi-Image for that zone)
+     **********************************************************/
     function openZoneModal(title) {
         const zoneIndex = findZoneIndexByTitle(title);
-        
-        if (zoneIndex !== -1) {
-            currentZoneIndex = zoneIndex;
-            
-            // Show modal
-            zoneModal.classList.add('active');
-            
-            // Display the current zone
-            showCurrentZone();
-            
-            // Reset state
-            resetTapState();
-        }
+        if (zoneIndex === -1) return;
+
+        currentZoneIndex = zoneIndex;
+        currentImageIndex = 0;
+
+        zoneModal.classList.add('active');
+        showCurrentImage();
+        resetTapState();
     }
-    
-    // Modal navigation events - Now navigate between zones rather than images
-    prevButton.addEventListener('click', previousZone);
-    nextButton.addEventListener('click', nextZone);
-    
-    // Close modal
-    closeButton.addEventListener('click', function() {
+
+    /**********************************************************
+     * 10) Display the Current Image in the Carousel
+     **********************************************************/
+    function showCurrentImage() {
+        if (!allZones.length) return;
+        const zoneObj = allZones[currentZoneIndex];
+        if (!zoneObj) return;
+
+        const images = zoneObj.imagePaths;
+        if (!images || !images.length) {
+            sliderContainer.innerHTML = `<p style="color:red;text-align:center;">No images found for ${zoneObj.title}</p>`;
+            modalTitle.textContent = formatZoneTitle(zoneObj.title);
+            return;
+        }
+
+        // Clear old image
+        sliderContainer.innerHTML = '';
+
+        // Build new image
+        const img = document.createElement('img');
+        img.className = 'slider-image fade-transition';
+        img.src = imageBaseURL + encodeURIComponent(images[currentImageIndex]);
+        img.alt = formatZoneTitle(zoneObj.title);
+
+        // Clicking the image => fullscreen
+        img.addEventListener('click', () => {
+            showFullscreen(img.src, zoneObj.title);
+        });
+
+        sliderContainer.appendChild(img);
+        modalTitle.textContent = formatZoneTitle(zoneObj.title);
+    }
+
+    /**********************************************************
+     * 11) Next/Prev image in the same zone
+     **********************************************************/
+    function nextImage() {
+        if (!allZones.length) return;
+        const zoneObj = allZones[currentZoneIndex];
+        if (!zoneObj) return;
+
+        const images = zoneObj.imagePaths;
+        currentImageIndex = (currentImageIndex + 1) % images.length;
+        showCurrentImage();
+    }
+    function prevImage() {
+        if (!allZones.length) return;
+        const zoneObj = allZones[currentZoneIndex];
+        if (!zoneObj) return;
+
+        const images = zoneObj.imagePaths;
+        currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
+        showCurrentImage();
+    }
+
+    /**********************************************************
+     * 12) Close Modal
+     **********************************************************/
+    function closeModal() {
         zoneModal.classList.remove('active');
         resetTapState();
-    });
-    
-    // Close modal when clicking outside content
-    zoneModal.addEventListener('click', function(e) {
+    }
+    // Close if click outside content
+    zoneModal.addEventListener('click', (e) => {
         if (e.target === zoneModal) {
-            zoneModal.classList.remove('active');
-            resetTapState();
+            closeModal();
         }
     });
-    
-    // Close fullscreen view
-    closeFullscreenBtn.addEventListener('click', function() {
+
+    /**********************************************************
+     * 13) Fullscreen
+     **********************************************************/
+    function showFullscreen(src, title) {
+        fullscreenImageContainer.innerHTML = '';
+        const fsImg = document.createElement('img');
+        fsImg.src = src;
+        fsImg.alt = formatZoneTitle(title);
+        fullscreenImageContainer.appendChild(fsImg);
+        fullscreenView.classList.add('active');
+    }
+    function closeFullscreen() {
         fullscreenView.classList.remove('active');
-    });
-    
-    // Close fullscreen when clicking outside the image
-    fullscreenView.addEventListener('click', function(e) {
+    }
+    fullscreenView.addEventListener('click', (e) => {
         if (e.target === fullscreenView) {
-            fullscreenView.classList.remove('active');
+            closeFullscreen();
         }
     });
-    
-    // Handle keyboard navigation
+
+    /**********************************************************
+     * 14) Format Title
+     **********************************************************/
+    function formatZoneTitle(title) {
+        return title
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^./, str => str.toUpperCase())
+            .trim();
+    }
+
+    function findZoneIndexByTitle(title) {
+        return allZones.findIndex(z => z.title === title);
+    }
+
+    /**********************************************************
+     * 15) Keyboard Nav
+     **********************************************************/
     document.addEventListener('keydown', function(e) {
         if (fullscreenView.classList.contains('active')) {
-            if (e.key === 'Escape') {
-                fullscreenView.classList.remove('active');
-            }
+            if (e.key === 'Escape') closeFullscreen();
         } else if (zoneModal.classList.contains('active')) {
-            if (e.key === 'Escape') {
-                zoneModal.classList.remove('active');
-                resetTapState();
-            }
-            if (e.key === 'ArrowLeft') {
-                previousZone();
-            }
-            if (e.key === 'ArrowRight') {
-                nextZone();
-            }
+            if (e.key === 'Escape') closeModal();
+            if (e.key === 'ArrowLeft') prevImage();
+            if (e.key === 'ArrowRight') nextImage();
         }
     });
-    
-    // Initialize everything
+
+    /**********************************************************
+     * 16) Hook Up Buttons
+     **********************************************************/
+    prevButton.addEventListener('click', prevImage);
+    nextButton.addEventListener('click', nextImage);
+    closeButton.addEventListener('click', closeModal);
+    closeFullscreenBtn.addEventListener('click', closeFullscreen);
+
+    /**********************************************************
+     * 17) Desktop Hover Effects
+     **********************************************************/
+    mapAreas.forEach(area => {
+        // On desktop hover
+        area.addEventListener('mouseover', function() {
+            if (isMobile || lastClickedZone) return;
+            const title = this.getAttribute('title');
+            zoneLabel.textContent = formatZoneTitle(title);
+            zoneLabel.style.opacity = '1';
+            if (zoneHighlights[title]) {
+                zoneHighlights[title].style.opacity = '1';
+                zoneHighlights[title].style.transform = 'scale(1.01)';
+            }
+            mapOverlay.style.opacity = '1';
+        });
+        area.addEventListener('mouseout', function() {
+            if (isMobile || lastClickedZone) return;
+            zoneLabel.style.opacity = '0';
+            const title = this.getAttribute('title');
+            if (zoneHighlights[title]) {
+                zoneHighlights[title].style.opacity = '0';
+                zoneHighlights[title].style.transform = 'scale(1)';
+            }
+            mapOverlay.style.opacity = '0';
+        });
+        area.addEventListener('click', function() {
+            userInteracted = true;
+            stopAutoCycle();
+        });
+    });
+
+    // Initialize the entire script
     init();
 });
