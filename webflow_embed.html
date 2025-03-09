@@ -668,3 +668,134 @@
     */
   });
 </script>
+
+<!-- Add fullscreen image functionality for carousel images -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Get fullscreen elements
+    const fullscreenView = document.querySelector(".fullscreen-view");
+    const fullscreenContainer = document.querySelector(
+      ".fullscreen-image-container"
+    );
+    const closeFullscreenBtn = document.querySelector(".close-fullscreen");
+
+    // Style for fullscreen view
+    fullscreenView.style.display = "none";
+    fullscreenView.style.position = "fixed";
+    fullscreenView.style.top = "0";
+    fullscreenView.style.left = "0";
+    fullscreenView.style.width = "100%";
+    fullscreenView.style.height = "100%";
+    fullscreenView.style.backgroundColor = "rgba(0, 0, 0, 0.9)";
+    fullscreenView.style.zIndex = "2000"; // Higher than the modal
+    fullscreenView.style.justifyContent = "center";
+    fullscreenView.style.alignItems = "center";
+    fullscreenView.style.flexDirection = "column";
+
+    fullscreenContainer.style.maxWidth = "95%";
+    fullscreenContainer.style.maxHeight = "90%";
+    fullscreenContainer.style.position = "relative";
+    fullscreenContainer.style.display = "flex";
+    fullscreenContainer.style.justifyContent = "center";
+    fullscreenContainer.style.alignItems = "center";
+
+    closeFullscreenBtn.style.position = "absolute";
+    closeFullscreenBtn.style.top = "20px";
+    closeFullscreenBtn.style.right = "20px";
+    closeFullscreenBtn.style.fontSize = "40px";
+    closeFullscreenBtn.style.color = "white";
+    closeFullscreenBtn.style.cursor = "pointer";
+    closeFullscreenBtn.style.backgroundColor = "transparent";
+    closeFullscreenBtn.style.border = "none";
+    closeFullscreenBtn.style.zIndex = "2001";
+
+    // Function to show fullscreen image
+    function showFullscreenImage(imageSrc, altText) {
+      // Create new image element
+      const img = document.createElement("img");
+      img.src = imageSrc;
+      img.alt = altText || "Fullscreen image";
+      img.style.maxWidth = "100%";
+      img.style.maxHeight = "90vh";
+      img.style.objectFit = "contain";
+      img.style.boxShadow = "0 5px 30px rgba(0, 0, 0, 0.3)";
+
+      // Clear previous images and add new one
+      fullscreenContainer.innerHTML = "";
+      fullscreenContainer.appendChild(img);
+
+      // Show fullscreen view with fade-in animation
+      fullscreenView.style.display = "flex";
+      fullscreenView.style.opacity = "0";
+      setTimeout(() => {
+        fullscreenView.style.transition = "opacity 0.3s ease";
+        fullscreenView.style.opacity = "1";
+      }, 10);
+    }
+
+    // Add click handler to close fullscreen view
+    closeFullscreenBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Fade out animation
+      fullscreenView.style.opacity = "0";
+      setTimeout(() => {
+        fullscreenView.style.display = "none";
+      }, 300);
+    });
+
+    // Close when clicking outside the image
+    fullscreenView.addEventListener("click", function (e) {
+      if (e.target === fullscreenView) {
+        closeFullscreenBtn.click();
+      }
+    });
+
+    // Close on ESC key
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && fullscreenView.style.display !== "none") {
+        closeFullscreenBtn.click();
+      }
+    });
+
+    // Add click listeners to images in the slider container
+    function setupImageClickHandlers() {
+      // We need to use a mutation observer since images are dynamically added
+      const sliderContainer = document.querySelector(".slider-container");
+
+      // Create a MutationObserver to watch for added images
+      const observer = new MutationObserver(function (mutations) {
+        mutations.forEach(function (mutation) {
+          if (mutation.addedNodes.length) {
+            mutation.addedNodes.forEach(function (node) {
+              // If the added node is an image, add click handler
+              if (node.nodeName === "IMG") {
+                addImageClickHandler(node);
+              }
+            });
+          }
+        });
+      });
+
+      // Start observing the slider container for added images
+      observer.observe(sliderContainer, { childList: true });
+
+      // Function to add click handler to an image
+      function addImageClickHandler(imgElement) {
+        imgElement.style.cursor = "zoom-in";
+
+        imgElement.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          // Show image in fullscreen
+          showFullscreenImage(this.src, this.alt);
+        });
+      }
+    }
+
+    // Setup the click handlers for carousel images
+    setupImageClickHandlers();
+  });
+</script>
