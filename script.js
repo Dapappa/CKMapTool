@@ -58,8 +58,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize the application
     function init() {
+        // Initialize basic components
         initializeZones();
-        createAreaHighlights();
+        
+        // Make sure map is loaded before creating highlights
+        if (mainMap.complete) {
+            createAreaHighlights();
+            updateAreaHighlights();
+        } else {
+            mainMap.onload = function() {
+                createAreaHighlights();
+                updateAreaHighlights();
+            };
+        }
+        
+        // Add touch events for mobile devices
+        setupTouchEvents();
         
         // Fade out initial overlay after 5 seconds
         setTimeout(() => {
@@ -75,10 +89,98 @@ document.addEventListener('DOMContentLoaded', function() {
             stopAutoCycle();
         });
         
-        // Update mobile detection on resize
+        // Handle window resize events
+        let resizeTimer;
         window.addEventListener('resize', () => {
+            // Update mobile detection
             isMobile = window.innerWidth <= 768;
+            
+            // Debounce resize events to improve performance
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                updateAreaHighlights();
+            }, 250);
         });
+        
+        // Trigger initial resize calculation
+        // This ensures coordinates are scaled correctly on first load
+        setTimeout(() => {
+            updateAreaHighlights();
+        }, 500);
+        
+        // Update on orientation change (important for mobile)
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                updateAreaHighlights();
+            }, 200);
+        });
+    }
+
+    // Setup touch events for more responsive mobile experience
+    function setupTouchEvents() {
+        // Check if the device supports touch events
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints;
+        if (!isTouchDevice) return;
+        
+        // Add touch event to the map wrapper
+        mapWrapper.addEventListener('touchstart', function(e) {
+            // Prevent default behavior to avoid scrolling
+            e.preventDefault();
+            
+            // Get the touch coordinates
+            const touch = e.touches[0];
+            const touchX = touch.clientX;
+            const touchY = touch.clientY;
+            
+            // Get the map's position
+            const rect = mapWrapper.getBoundingClientRect();
+            
+            // Calculate relative touch position
+            const relativeX = touchX - rect.left;
+            const relativeY = touchY - rect.top;
+            
+            // Find which area was touched
+            let touchedArea = null;
+            mapAreas.forEach(area => {
+                if (area.getAttribute('shape') === 'poly') {
+                    const coords = area.getAttribute('coords').split(',').map(Number);
+                    if (isPointInPolygon(relativeX, relativeY, coords)) {
+                        touchedArea = area;
+                    }
+                }
+            });
+            
+            // If an area was touched, simulate a click
+            if (touchedArea) {
+                const title = touchedArea.getAttribute('title');
+                userInteracted = true;
+                stopAutoCycle();
+                
+                // Use the two-tap approach for mobile
+                if (isFirstTap) {
+                    handleFirstTap(title);
+                } else if (title === lastClickedZone) {
+                    openZoneModal(title);
+                } else {
+                    resetTapState();
+                    handleFirstTap(title);
+                }
+            }
+        }, { passive: false });
+    }
+
+    // Check if a point is inside a polygon
+    function isPointInPolygon(x, y, poly) {
+        let inside = false;
+        for (let i = 0, j = poly.length - 2; i < poly.length; j = i, i += 2) {
+            const xi = poly[i], yi = poly[i + 1];
+            const xj = poly[j], yj = poly[j + 1];
+            
+            const intersect = ((yi > y) !== (yj > y)) && 
+                (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
     }
 
     // Start auto-cycling of highlights
@@ -180,6 +282,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update positions of highlights on resize
     function updateAreaHighlights() {
+        // Get current dimensions
+        const mapWidth = mainMap.width || mainMap.clientWidth || mainMap.offsetWidth;
+        const mapHeight = mainMap.height || mainMap.clientHeight || mainMap.offsetHeight;
+        
+        // Get natural dimensions (original size)
+        const naturalWidth = mainMap.naturalWidth;
+        const naturalHeight = mainMap.naturalHeight;
+        
+        // Calculate scaling factors
+        const scaleX = mapWidth / naturalWidth;
+        const scaleY = mapHeight / naturalHeight;
+        
         mapAreas.forEach(area => {
             if (area.getAttribute('shape') === 'poly') {
                 const coords = area.getAttribute('coords').split(',');
@@ -189,10 +303,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (svg) {
                     const polygon = svg.querySelector('polygon');
                     
-                    // Scale coordinates based on current image size
-                    const scaleX = mainMap.width / mainMap.naturalWidth;
-                    const scaleY = mainMap.height / mainMap.naturalHeight;
-                    
                     let points = '';
                     for (let i = 0; i < coords.length; i += 2) {
                         const x = parseFloat(coords[i]) * scaleX;
@@ -201,6 +311,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     polygon.setAttribute('points', points.trim());
+                }
+                
+                // Update the actual area coords for accurate clicking
+                let newCoords = '';
+                for (let i = 0; i < coords.length; i++) {
+                    const value = parseFloat(coords[i]);
+                    const newValue = i % 2 === 0 ? value * scaleX : value * scaleY;
+                    newCoords += Math.round(newValue) + ',';
+                }
+                newCoords = newCoords.slice(0, -1); // Remove trailing comma
+                
+                // Only update if significantly different to avoid constant small updates
+                const currentCoords = area.getAttribute('coords');
+                if (Math.abs(currentCoords.length - newCoords.length) > 10) {
+                    area.setAttribute('coords', newCoords);
                 }
             }
         });
