@@ -4,71 +4,54 @@
   rel="stylesheet"
 />
 
-<!-- External CSS with cache busting (via jsDelivr) -->
+<!-- External CSS (via jsDelivr) -->
 <link
   rel="stylesheet"
-  href="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@latest/styles.css"
+  href="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/styles.css"
 />
 
-<!-- Additional CSS to fix Webflow-specific issues -->
+<!-- Adding inline styles to ensure visibility -->
 <style>
-  /* Fix for Webflow embedding */
-  .map-container {
-    position: relative;
-    max-width: 100%;
-    margin: 0 auto;
+  .zone-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .zone-modal.active {
+    display: flex !important;
+  }
+
+  .modal-content {
+    background-color: #fff;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    border-radius: 8px;
     overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 80vh;
-    cursor: pointer;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
   }
 
-  /* Ensure image map works correctly */
-  .map-wrapper {
-    position: relative;
-    width: 100%;
+  .image-slider img {
     max-width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  /* Make sure SVG and map elements work correctly */
-  .main-map {
+    max-height: 60vh;
     display: block;
-    max-width: 100%;
-    height: auto;
-    max-height: 80vh;
+    margin: 0 auto;
+  }
+
+  .slider-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     position: relative;
-    z-index: 2;
-  }
-
-  /* Fix highlight visibility */
-  .zone-highlight {
-    position: absolute;
-    pointer-events: none;
-    z-index: 3;
-    opacity: 0;
-    filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.2));
-  }
-
-  .zone-highlight polygon {
-    stroke-width: 3px;
-  }
-
-  /* Make zone label more visible */
-  .zone-label {
-    z-index: 4;
-    font-size: 3rem;
-    text-shadow: 0 0 10px black;
-  }
-
-  /* Ensure area elements are clickable */
-  area {
-    cursor: pointer;
+    min-height: 200px;
   }
 </style>
 
@@ -77,10 +60,9 @@
   <div class="map-wrapper">
     <!-- Note the URL-encoded space: City%20Map.svg -->
     <img
-      src="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@latest/City%20Map.svg"
+      src="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/City%20Map.svg"
       usemap="#image-map"
       class="main-map"
-      alt="Calgary Interactive Map"
     />
     <div class="zone-label"></div>
 
@@ -217,196 +199,157 @@
   </div>
 </div>
 
-<!-- Debug console for in-page debugging -->
-<div
-  id="debug-console"
-  style="
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    max-height: 30vh;
-    overflow: auto;
-    padding: 10px;
-    font-family: monospace;
-    display: none;
-    z-index: 9999;
-  "
->
-  <div
-    style="display: flex; justify-content: space-between; margin-bottom: 10px"
-  >
-    <strong>Debug Console</strong>
-    <button
-      onclick="document.getElementById('debug-console').style.display='none'"
-      style="background: none; border: none; color: white; cursor: pointer"
-    >
-      ×
-    </button>
-  </div>
-  <div id="debug-output"></div>
-</div>
+<!-- External JS (via jsDelivr) -->
+<script
+  src="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/script.js"
+  defer
+></script>
 
-<!-- Show debug console by default during testing -->
-<script>
-  // Show debug console initially
-  document.addEventListener("DOMContentLoaded", function () {
-    setTimeout(function () {
-      document.getElementById("debug-console").style.display = "block";
-    }, 1000);
-  });
-
-  // Override console.log to show in our custom debug console
-  (function () {
-    // Show debug console with double-tap on bottom of screen
-    document.addEventListener("dblclick", function (e) {
-      if (e.clientY > window.innerHeight - 50) {
-        document.getElementById("debug-console").style.display = "block";
-      }
-    });
-
-    // Store original console methods
-    const originalLog = console.log;
-    const originalError = console.error;
-    const originalWarn = console.warn;
-
-    // Function to add message to debug console
-    function addToDebugConsole(message, type) {
-      const debugOutput = document.getElementById("debug-output");
-      if (debugOutput) {
-        const msgElem = document.createElement("div");
-        msgElem.style.color =
-          type === "error"
-            ? "#ff5555"
-            : type === "warn"
-            ? "#ffcc00"
-            : "#ffffff";
-        msgElem.textContent = message;
-        debugOutput.appendChild(msgElem);
-        debugOutput.scrollTop = debugOutput.scrollHeight;
-      }
-    }
-
-    // Override console methods
-    console.log = function () {
-      const args = Array.from(arguments);
-      addToDebugConsole(
-        args
-          .map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : arg))
-          .join(" ")
-      );
-      originalLog.apply(console, arguments);
-    };
-
-    console.error = function () {
-      const args = Array.from(arguments);
-      addToDebugConsole(
-        args
-          .map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : arg))
-          .join(" "),
-        "error"
-      );
-      originalError.apply(console, arguments);
-    };
-
-    console.warn = function () {
-      const args = Array.from(arguments);
-      addToDebugConsole(
-        args
-          .map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : arg))
-          .join(" "),
-        "warn"
-      );
-      originalWarn.apply(console, arguments);
-    };
-  })();
-</script>
-
-<!-- Add a direct click handler to make sure image map is working -->
+<!-- Fallback script to ensure functionality -->
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    console.log("Adding direct click handlers for Webflow compatibility");
+    // Make sure zone modal can be activated
+    const areas = document.querySelectorAll("area");
+    const zoneModal = document.querySelector(".zone-modal");
+    const closeButton = document.querySelector(".close-button");
 
-    // Get the image and map elements
-    const mainMap = document.querySelector(".main-map");
-    const mapAreas = document.querySelectorAll("area");
+    // Define image paths - this maps zone titles to their image paths
+    const zoneImageMap = {
+      NorthWestAreaA: [
+        "north-west-area-a.jpg",
+        "north-west-area-a-2.jpg",
+        "north-west-area-a-3.jpg",
+      ],
+      NorthWestAreaB: [
+        "Northwest Calgary Distribution Map (3)-1.png",
+        "Northwest Calgary Distribution Map (3)-2.png",
+      ],
+      NorthWestAreaC: ["Northwest Calgary Distribution Map (3)-3.png"],
+      NorthEastAreaA: [
+        "North East-1.png",
+        "North East-2.png",
+        "North East-3.png",
+      ],
+      NorthEastAreaB: ["North East-1.png", "North East-2.png"],
+      NorthEastAreaC: ["North East-3.png"],
+      DowntownAreaA: [
+        "Downtown Calgary Map (1)-1.png",
+        "Downtown Calgary Map (1)-2.png",
+      ],
+      DowntownAreaB: [
+        "Downtown Calgary Map (1)-1.png",
+        "Downtown Calgary Map (1)-2.png",
+      ],
+      SouthEastAreaA: [
+        "South East Completed (2)-1.png",
+        "South East Completed (2)-2.png",
+      ],
+      SouthEastAreaB: [
+        "South East Completed (2)-1.png",
+        "South East Completed (2)-2.png",
+      ],
+      SouthWestAreaA: ["Southwest Map (2)-1.png", "Southwest Map (2)-2.png"],
+      SouthWestAreaB: ["Southwest Map (2)-1.png", "Southwest Map (2)-2.png"],
+    };
 
-    if (!mainMap) {
-      console.error("ERROR: Main map image not found!");
-      return;
+    // Base URL for images
+    const imageBaseURL =
+      "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@latest/";
+
+    // Helper function to format zone titles for display
+    function formatZoneTitle(title) {
+      return title
+        .replace(/([A-Z])/g, " $1")
+        .replace(/^./, (str) => str.toUpperCase())
+        .trim();
     }
 
-    if (!mapAreas.length) {
-      console.error("ERROR: No map areas found!");
-      console.log(
-        "Map element exists:",
-        !!document.querySelector('map[name="image-map"]')
-      );
-      return;
-    }
+    // In case the main script fails, this will ensure basic functionality
+    if (typeof window.mapInitialized === "undefined") {
+      console.log("Fallback script activated");
 
-    console.log("Found map image and", mapAreas.length, "areas");
+      // Add click handlers to all areas
+      areas.forEach((area) => {
+        area.addEventListener("click", function (e) {
+          e.preventDefault();
 
-    // Add a direct click handler to the image
-    mainMap.addEventListener("click", function (e) {
-      console.log("Map clicked directly");
-      const rect = mainMap.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+          // Get zone title from the area
+          const zoneTitle = this.getAttribute("title");
+          console.log("Clicked zone:", zoneTitle);
 
-      // Get the natural dimensions for scaling
-      const scaleX = mainMap.width / mainMap.naturalWidth;
-      const scaleY = mainMap.height / mainMap.naturalHeight;
+          // Set modal title
+          document.querySelector(".modal-title").textContent =
+            formatZoneTitle(zoneTitle);
 
-      console.log(
-        `Click at (${x}, ${y}) - Map size: ${mainMap.width}x${mainMap.height}`
-      );
+          // Clear previous images
+          const sliderContainer = document.querySelector(".slider-container");
+          sliderContainer.innerHTML = "";
 
-      // Check which area was clicked
-      let clickedArea = null;
-      mapAreas.forEach((area) => {
-        if (area.getAttribute("shape") === "poly") {
-          const coords = area.getAttribute("coords").split(",").map(Number);
+          // Add images if available for this zone
+          if (zoneImageMap[zoneTitle]) {
+            const images = zoneImageMap[zoneTitle];
 
-          // Transform the click coordinates to match the original map coordinates
-          const mapX = x / scaleX;
-          const mapY = y / scaleY;
+            // Add first image
+            if (images.length > 0) {
+              const img = document.createElement("img");
+              img.src = imageBaseURL + encodeURIComponent(images[0]);
+              img.alt = formatZoneTitle(zoneTitle);
+              img.className = "active";
+              sliderContainer.appendChild(img);
 
-          if (isPointInPolygon(mapX, mapY, coords)) {
-            clickedArea = area;
+              // Store current image index and images array for navigation
+              sliderContainer.dataset.currentIndex = "0";
+              sliderContainer.dataset.zoneTitle = zoneTitle;
+            }
           }
+
+          // Show modal
+          zoneModal.classList.add("active");
+        });
+      });
+
+      // Close button
+      closeButton.addEventListener("click", function () {
+        zoneModal.classList.remove("active");
+      });
+
+      // Navigation buttons
+      const prevButton = document.querySelector(".prev-button");
+      const nextButton = document.querySelector(".next-button");
+
+      prevButton.addEventListener("click", function () {
+        const sliderContainer = document.querySelector(".slider-container");
+        const zoneTitle = sliderContainer.dataset.zoneTitle;
+        let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
+        const images = zoneImageMap[zoneTitle] || [];
+
+        if (images.length > 1) {
+          currentIndex = (currentIndex - 1 + images.length) % images.length;
+          sliderContainer.dataset.currentIndex = currentIndex.toString();
+
+          // Update image
+          const img = sliderContainer.querySelector("img");
+          img.src = imageBaseURL + encodeURIComponent(images[currentIndex]);
         }
       });
 
-      if (clickedArea) {
-        const title = clickedArea.getAttribute("title");
-        console.log("Found clicked area:", title);
-        // Simulate a click on the area
-        clickedArea.click();
-      }
-    });
+      nextButton.addEventListener("click", function () {
+        const sliderContainer = document.querySelector(".slider-container");
+        const zoneTitle = sliderContainer.dataset.zoneTitle;
+        let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
+        const images = zoneImageMap[zoneTitle] || [];
 
-    // Helper function to check if a point is inside a polygon
-    function isPointInPolygon(x, y, poly) {
-      let inside = false;
-      for (let i = 0, j = poly.length - 2; i < poly.length; j = i, i += 2) {
-        const xi = poly[i],
-          yi = poly[i + 1];
-        const xj = poly[j],
-          yj = poly[j + 1];
-        const intersect =
-          yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
-        if (intersect) inside = !inside;
-      }
-      return inside;
+        if (images.length > 1) {
+          currentIndex = (currentIndex + 1) % images.length;
+          sliderContainer.dataset.currentIndex = currentIndex.toString();
+
+          // Update image
+          const img = sliderContainer.querySelector("img");
+          img.src = imageBaseURL + encodeURIComponent(images[currentIndex]);
+        }
+      });
+
+      window.mapInitialized = true;
     }
   });
 </script>
-
-<!-- External JS with cache busting (via jsDelivr) -->
-<script
-  src="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@latest/script.js"
-  defer
-></script>
