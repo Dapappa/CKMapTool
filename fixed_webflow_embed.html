@@ -1,0 +1,891 @@
+<!-- Google Font -->
+<link
+  href="https://fonts.googleapis.com/css2?family=Bangers&display=swap"
+  rel="stylesheet"
+/>
+
+<!-- Simple inline styles for Webflow compatibility -->
+<style>
+  /* Critical styles needed for functionality */
+  .map-container {
+    position: relative;
+    max-width: 100%;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+  }
+
+  .map-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 800px; /* Control the maximum width */
+    line-height: 0;
+    margin: 0 auto;
+  }
+
+  .main-map {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 80vh;
+    object-fit: contain;
+    margin: 0 auto;
+  }
+
+  .zone-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: "Bangers", "Impact", sans-serif;
+    font-size: 3rem;
+    color: #ff0000;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 10;
+    pointer-events: none;
+    width: 80%;
+  }
+
+  .zone-label.active {
+    opacity: 1;
+  }
+
+  .initial-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 5;
+    opacity: 1;
+    transition: opacity 0.8s ease;
+    pointer-events: none;
+  }
+
+  .initial-overlay.hide {
+    opacity: 0;
+  }
+
+  .instruction-text {
+    font-family: "Bangers", "Impact", sans-serif;
+    font-size: 2.5rem;
+    color: white;
+    text-align: center;
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    max-width: 80%;
+  }
+
+  /* Zone modal styling */
+  .zone-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+  }
+
+  .zone-modal.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .modal-content {
+    background-color: #fff;
+    width: 90%;
+    max-width: 1200px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background-color: #f8f8f8;
+    border-bottom: 1px solid #eee;
+  }
+
+  .modal-title {
+    font-family: "Bangers", "Impact", sans-serif;
+    font-size: 2.4rem;
+    color: #ff0000;
+  }
+
+  .close-button {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    color: #555;
+  }
+
+  .modal-body {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .image-slider {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .slider-container {
+    display: flex;
+    height: 100%;
+  }
+
+  .slider-image {
+    width: 100%;
+    flex-shrink: 0;
+    object-fit: contain;
+    height: 100%;
+    padding: 20px;
+    max-height: 70vh;
+    cursor: zoom-in;
+  }
+
+  .prev-button,
+  .next-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(255, 255, 255, 0.7);
+    color: #333;
+    font-size: 2rem;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 5;
+  }
+
+  .prev-button {
+    left: 20px;
+  }
+
+  .next-button {
+    right: 20px;
+  }
+
+  /* Fullscreen view */
+  .fullscreen-view {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+  }
+
+  .fullscreen-view.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .fullscreen-image-container {
+    width: 90%;
+    height: 90%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .fullscreen-image-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .close-fullscreen {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    font-size: 2.5rem;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 201;
+  }
+
+  /* Fix for Firefox and other browsers */
+  map area {
+    cursor: pointer;
+    outline: none;
+  }
+</style>
+
+<div class="map-container">
+  <!-- The main map with image map areas -->
+  <div class="map-wrapper">
+    <img
+      src="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@latest/City%20Map.svg"
+      usemap="#image-map"
+      class="main-map"
+      alt="Calgary Interactive Map"
+    />
+    <div class="zone-label"></div>
+
+    <!-- Initial overlay with tap instructions -->
+    <div class="initial-overlay">
+      <div class="instruction-text">Tap a region to explore</div>
+    </div>
+  </div>
+
+  <map name="image-map">
+    <area
+      target=""
+      alt="NorthWestAreaA"
+      title="NorthWestAreaA"
+      coords="116,639,284,638,287,558,296,552,295,543,287,533,284,500,291,497,274,485,322,476,373,475,369,408,289,357,277,382,221,410,243,425,225,441,203,445,187,456,137,451,125,456"
+      shape="poly"
+    />
+    <area
+      target=""
+      alt="NorthWestAreaB"
+      title="NorthWestAreaB"
+      coords="73,226,71,353,126,357,115,405,210,439,232,423,217,408,264,383,284,357,298,337,299,304,317,284,322,275,319,258,299,248,289,236,283,228,229,225,133,222"
+      shape="poly"
+    />
+    <area
+      target=""
+      alt="NorthWestAreaC"
+      title="NorthWestAreaC"
+      coords="227,142,225,174,243,182,248,205,246,218,285,224,296,234,301,242,310,249,319,254,322,269,321,282,330,292,338,292,345,290,354,294,371,312,385,330,393,351,406,346,420,349,446,348,456,344,457,320,455,303,418,274,419,260,428,248,432,234,419,221,417,208,417,196,421,179,424,169,439,163,449,159,457,154,456,126,454,99,379,99,378,137"
+      shape="poly"
+    />
+    <area
+      target=""
+      alt="NorthEastAreaC"
+      title="NorthEastAreaC"
+      coords="425,171,480,161,485,140,601,141,605,163,651,166,644,190,647,215,519,221,458,301,420,272,428,256,434,239,427,220,419,215"
+      shape="poly"
+    />
+    <area
+      target=""
+      alt="NorthEastAreaB"
+      title="NorthEastAreaB"
+      coords="522,229,648,229,649,263,676,271,692,282,699,353,700,387,697,416,694,441,695,475,504,472,500,449,492,436,487,428,480,417,478,394,468,370,469,297,474,280,512,235,517,233"
+      shape="poly"
+    />
+    <area
+      target=""
+      alt="NorthEastAreaA"
+      title="NorthEastAreaA"
+      coords="503,481,692,482,691,530,701,533,700,544,691,557,676,559,652,561,650,574,630,580,607,583,572,585,529,574"
+      shape="poly"
+    />
+    <area
+      target=""
+      alt="SouthEastAreaA"
+      title="SouthEastAreaA"
+      coords="542,582,541,589,532,597,529,612,529,631,523,642,504,661,502,677,510,698,494,702,483,722,488,760,500,788,519,799,539,804,546,791,556,725,583,721,644,716,673,722,688,718,694,718,693,643,629,638,628,596,616,588"
+      shape="poly"
+    />
+    <area
+      target=""
+      alt="SouthEastAreaB"
+      title="SouthEastAreaB"
+      coords="602,1085,619,1046,643,1037,662,1018,719,995,721,939,700,874,694,745,669,752,643,772,625,771,623,735,560,733,550,796,545,812,527,814,537,844,559,847,569,858,569,875,574,886,566,910,561,926,557,933,554,947,556,976,563,1002,562,1020,570,1043,592,1080,595,1084"
+      shape="poly"
+    />
+    <area
+      target=""
+      alt="SouthWestAreaB"
+      title="SouthWestAreaB"
+      coords="371,866,446,897,495,941,510,968,545,999,547,1016,509,1021,512,1033,526,1043,548,1061,578,1063,601,1091,594,1101,515,1099,464,1033,437,1032,423,1021,383,1017,375,987,335,976,317,960,310,940,308,920,305,896,302,884,335,887,348,894"
+      shape="poly"
+    />
+    <area
+      target=""
+      alt="SouthWestAreaA"
+      title="SouthWestAreaA"
+      coords="291,850,309,858,328,854,335,858,350,845,358,846,383,840,399,846,410,855,424,860,461,866,494,905,513,914,532,904,553,897,532,865,533,846,521,834,519,813,499,798,484,763,466,740,457,726,418,729,414,691,368,691,375,727,374,748,360,746,347,744,334,745,321,745,308,740,291,735"
+      shape="poly"
+    />
+    <area
+      target=""
+      alt="DowntownAreaB"
+      title="DowntownAreaB"
+      coords="284,489,298,500,293,519,299,544,297,565,291,599,321,588,345,564,524,567,497,479,496,458,477,426,473,390,458,356,411,353,396,360,378,385,377,405,380,418,378,445,379,459,382,474,328,479,303,482"
+      shape="poly"
+    />
+    <area
+      target=""
+      alt="DowntownAreaA"
+      title="DowntownAreaA"
+      coords="420,675,420,723,454,721,470,736,492,698,501,695,495,677,497,662,502,655,515,645,521,633,524,622,526,608,526,595,537,587,526,580,519,573,345,568,324,591,288,604,289,631,291,643,290,671,297,690,328,691,325,666,342,665,351,654,352,644,372,639,385,642,392,652,372,652,380,665,376,676,381,682,411,683"
+      shape="poly"
+    />
+  </map>
+</div>
+
+<!-- The zone modal for displaying images -->
+<div class="zone-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title"></h2>
+      <button class="close-button">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="image-slider">
+        <div class="slider-container">
+          <!-- Images will be loaded here dynamically -->
+        </div>
+        <button class="prev-button">&larr;</button>
+        <button class="next-button">&rarr;</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Full screen image view -->
+<div class="fullscreen-view">
+  <button class="close-fullscreen">&times;</button>
+  <div class="fullscreen-image-container">
+    <!-- Fullscreen image will be loaded here -->
+  </div>
+</div>
+
+<!-- Simple debug console - hidden by default -->
+<div
+  id="debug-console"
+  style="
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 12px;
+    max-height: 30vh;
+    overflow: auto;
+    z-index: 9999;
+    display: none;
+  "
+>
+  <div
+    style="display: flex; justify-content: space-between; margin-bottom: 5px"
+  >
+    <span>Debug Console</span>
+    <button
+      onclick="document.getElementById('debug-console').style.display='none'"
+      style="background: none; border: none; color: white; cursor: pointer"
+    >
+      ×
+    </button>
+  </div>
+  <div id="debug-output"></div>
+</div>
+
+<!-- Simplified JavaScript with core functionality -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Debug tools - make visible by default in testing
+    const debugConsole = document.getElementById("debug-console");
+    const debugOutput = document.getElementById("debug-output");
+    debugConsole.style.display = "block"; // Show debugging by default for testing
+
+    function log(message) {
+      console.log(message);
+      if (debugOutput) {
+        const entry = document.createElement("div");
+        entry.textContent = message;
+        debugOutput.appendChild(entry);
+        debugOutput.scrollTop = debugOutput.scrollHeight;
+      }
+    }
+
+    // Double-click anywhere to show debug console
+    document.addEventListener("dblclick", function () {
+      if (debugConsole) {
+        debugConsole.style.display = "block";
+      }
+    });
+
+    // Core UI elements
+    const mapWrapper = document.querySelector(".map-wrapper");
+    const mainMap = document.querySelector(".main-map");
+    const zoneLabel = document.querySelector(".zone-label");
+    const zoneModal = document.querySelector(".zone-modal");
+    const modalTitle = document.querySelector(".modal-title");
+    const closeButton = document.querySelector(".close-button");
+    const sliderContainer = document.querySelector(".slider-container");
+    const prevButton = document.querySelector(".prev-button");
+    const nextButton = document.querySelector(".next-button");
+    const mapAreas = document.querySelectorAll("area");
+    const initialOverlay = document.querySelector(".initial-overlay");
+    const fullscreenView = document.querySelector(".fullscreen-view");
+    const closeFullscreenBtn = document.querySelector(".close-fullscreen");
+    const fullscreenImageContainer = document.querySelector(
+      ".fullscreen-image-container"
+    );
+
+    // Create overlay for highlighting
+    const mapOverlay = document.createElement("div");
+    mapOverlay.className = "map-overlay";
+    mapOverlay.style.position = "absolute";
+    mapOverlay.style.top = "0";
+    mapOverlay.style.left = "0";
+    mapOverlay.style.width = "100%";
+    mapOverlay.style.height = "100%";
+    mapOverlay.style.backgroundColor = "rgba(0, 0, 0, 0.4)";
+    mapOverlay.style.opacity = "0";
+    mapOverlay.style.transition = "opacity 0.3s ease";
+    mapOverlay.style.pointerEvents = "none";
+    mapOverlay.style.zIndex = "1";
+    mapWrapper.appendChild(mapOverlay);
+
+    // Variables
+    let allZones = [];
+    let currentZoneIndex = 0;
+    let currentImageIndex = 0;
+    let isFirstTap = true;
+    let lastClickedZone = null;
+    let isMobile = window.innerWidth <= 768;
+
+    // Zone to image mapping
+    const zoneImageMap = {
+      NorthWestAreaA: [
+        "north-west-area-a.jpg",
+        "north-west-area-a-2.jpg",
+        "north-west-area-a-3.jpg",
+      ],
+      NorthWestAreaB: [
+        "Northwest Calgary Distribution Map (3)-1.png",
+        "Northwest Calgary Distribution Map (3)-2.png",
+      ],
+      NorthWestAreaC: ["Northwest Calgary Distribution Map (3)-3.png"],
+      NorthEastAreaA: [
+        "North East-1.png",
+        "North East-2.png",
+        "North East-3.png",
+      ],
+      NorthEastAreaB: ["North East-1.png", "North East-2.png"],
+      NorthEastAreaC: ["North East-3.png"],
+      DowntownAreaA: [
+        "Downtown Calgary Map (1)-1.png",
+        "Downtown Calgary Map (1)-2.png",
+      ],
+      DowntownAreaB: [
+        "Downtown Calgary Map (1)-1.png",
+        "Downtown Calgary Map (1)-2.png",
+      ],
+      SouthEastAreaA: [
+        "South East Completed (2)-1.png",
+        "South East Completed (2)-2.png",
+      ],
+      SouthEastAreaB: [
+        "South East Completed (2)-1.png",
+        "South East Completed (2)-2.png",
+      ],
+      SouthWestAreaA: ["Southwest Map (2)-1.png", "Southwest Map (2)-2.png"],
+      SouthWestAreaB: ["Southwest Map (2)-1.png", "Southwest Map (2)-2.png"],
+    };
+
+    // Base URL for images
+    const imageBaseURL =
+      "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@latest/";
+
+    // Initialize
+    function init() {
+      log("Initializing...");
+
+      if (!mainMap) {
+        log("ERROR: Main map not found");
+        return;
+      }
+
+      if (!mapAreas || mapAreas.length === 0) {
+        log("ERROR: No map areas found");
+        return;
+      }
+
+      log(`Found map with ${mapAreas.length} clickable areas`);
+
+      // Build the zones array
+      mapAreas.forEach((area) => {
+        const title = area.getAttribute("title");
+        if (title && zoneImageMap[title]) {
+          allZones.push({
+            title: title,
+            imagePaths: zoneImageMap[title],
+          });
+        }
+      });
+
+      log(`Found ${allZones.length} zones with images`);
+
+      // Fix for WebFlow - directly intercept clicks
+      setupClickInterception();
+
+      // Hide initial overlay
+      setTimeout(() => {
+        initialOverlay.classList.add("hide");
+      }, 5000);
+
+      // Handle window resize
+      window.addEventListener("resize", function () {
+        isMobile = window.innerWidth <= 768;
+      });
+
+      // Set up modal buttons
+      closeButton.addEventListener("click", closeModal);
+      prevButton.addEventListener("click", prevImage);
+      nextButton.addEventListener("click", nextImage);
+      closeFullscreenBtn.addEventListener("click", closeFullscreen);
+
+      // Keyboard navigation
+      document.addEventListener("keydown", function (e) {
+        if (fullscreenView.classList.contains("active")) {
+          if (e.key === "Escape") closeFullscreen();
+        } else if (zoneModal.classList.contains("active")) {
+          if (e.key === "Escape") closeModal();
+          if (e.key === "ArrowLeft") prevImage();
+          if (e.key === "ArrowRight") nextImage();
+        }
+      });
+
+      // Handle main image loaded
+      mainMap.onload = function () {
+        log(
+          "Main map loaded successfully with dimensions: " +
+            mainMap.width +
+            "x" +
+            mainMap.height
+        );
+      };
+
+      log("Initialization complete");
+    }
+
+    // Important: Setup click interception for WebFlow
+    function setupClickInterception() {
+      // Remove all standard event listeners that might be causing issues
+      mapAreas.forEach((area) => {
+        // Remove href attributes to prevent navigation
+        area.removeAttribute("href");
+
+        // Handle click directly on the image map areas
+        area.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const title = this.getAttribute("title");
+          log(`Area clicked directly: ${title}`);
+
+          handleZoneClick(title);
+          return false;
+        });
+
+        // Hover effects
+        area.addEventListener("mouseover", function () {
+          if (isMobile || lastClickedZone) return;
+          const title = this.getAttribute("title");
+          zoneLabel.textContent = formatZoneTitle(title);
+          zoneLabel.style.opacity = "1";
+          mapOverlay.style.opacity = "1";
+        });
+
+        area.addEventListener("mouseout", function () {
+          if (isMobile || lastClickedZone) return;
+          zoneLabel.style.opacity = "0";
+          mapOverlay.style.opacity = "0";
+        });
+      });
+
+      // Direct click handler for the map image
+      mainMap.addEventListener("click", function (e) {
+        // Get click coordinates relative to the image
+        const rect = mainMap.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        log(`Map clicked at coordinates: ${x}, ${y}`);
+
+        // Scale the coordinates to match the original image map coordinates
+        const scaleX = mainMap.naturalWidth / mainMap.width;
+        const scaleY = mainMap.naturalHeight / mainMap.height;
+
+        // Find which area was clicked
+        let clickedZone = null;
+        mapAreas.forEach((area) => {
+          if (area.getAttribute("shape") === "poly") {
+            const coords = area.getAttribute("coords").split(",").map(Number);
+            // Convert coordinates to array of points
+            const points = [];
+            for (let i = 0; i < coords.length; i += 2) {
+              points.push({
+                x: coords[i] / scaleX,
+                y: coords[i + 1] / scaleY,
+              });
+            }
+
+            // Check if click is inside polygon
+            if (pointInPolygon(x, y, points)) {
+              clickedZone = area.getAttribute("title");
+            }
+          }
+        });
+
+        if (clickedZone) {
+          log(`Found clicked zone: ${clickedZone}`);
+          handleZoneClick(clickedZone);
+        } else {
+          log("No zone found at click coordinates");
+        }
+      });
+    }
+
+    // Check if point is in polygon (for map clicking)
+    function pointInPolygon(x, y, polygon) {
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].x,
+          yi = polygon[i].y;
+        const xj = polygon[j].x,
+          yj = polygon[j].y;
+
+        const intersect =
+          yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    // Handle a zone click (after detection)
+    function handleZoneClick(title) {
+      if (isFirstTap) {
+        handleFirstTap(title);
+      } else if (title === lastClickedZone) {
+        openZoneModal(title);
+      } else {
+        resetTapState();
+        handleFirstTap(title);
+      }
+    }
+
+    // Handle first tap/hover
+    function handleFirstTap(title) {
+      zoneLabel.textContent = formatZoneTitle(title);
+      zoneLabel.classList.add("active");
+      mapOverlay.style.opacity = "1";
+
+      lastClickedZone = title;
+      isFirstTap = false;
+
+      // Auto-reset after 3 seconds
+      setTimeout(() => {
+        if (lastClickedZone === title) {
+          resetTapState();
+        }
+      }, 3000);
+    }
+
+    // Reset tap state
+    function resetTapState() {
+      zoneLabel.classList.remove("active");
+      mapOverlay.style.opacity = "0";
+      lastClickedZone = null;
+      isFirstTap = true;
+    }
+
+    // Open zone modal
+    function openZoneModal(title) {
+      const zoneIndex = findZoneIndexByTitle(title);
+      if (zoneIndex === -1) {
+        log(`Zone not found: ${title}`);
+        return;
+      }
+
+      currentZoneIndex = zoneIndex;
+      currentImageIndex = 0;
+
+      zoneModal.classList.add("active");
+      showCurrentImage();
+      resetTapState();
+    }
+
+    // Show current image
+    function showCurrentImage() {
+      const zoneObj = allZones[currentZoneIndex];
+      if (!zoneObj) return;
+
+      const images = zoneObj.imagePaths;
+      if (!images || !images.length) {
+        sliderContainer.innerHTML = `<p style="color:red;text-align:center;">No images found for ${zoneObj.title}</p>`;
+        modalTitle.textContent = formatZoneTitle(zoneObj.title);
+        return;
+      }
+
+      sliderContainer.innerHTML = "";
+
+      const loadingDiv = document.createElement("div");
+      loadingDiv.textContent = "Loading image...";
+      loadingDiv.style.position = "absolute";
+      loadingDiv.style.top = "50%";
+      loadingDiv.style.left = "50%";
+      loadingDiv.style.transform = "translate(-50%, -50%)";
+      loadingDiv.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+      loadingDiv.style.color = "white";
+      loadingDiv.style.padding = "15px 25px";
+      loadingDiv.style.borderRadius = "8px";
+      loadingDiv.style.zIndex = "10";
+      sliderContainer.appendChild(loadingDiv);
+
+      const img = document.createElement("img");
+      img.className = "slider-image";
+      const imgSrc =
+        imageBaseURL + encodeURIComponent(images[currentImageIndex]);
+      img.src = imgSrc;
+      img.alt = formatZoneTitle(zoneObj.title);
+
+      // Handle image load errors
+      img.onerror = function () {
+        loadingDiv.remove();
+        log(`Failed to load image: ${imgSrc}`);
+        sliderContainer.innerHTML = `<p style="color:red;text-align:center;">Error loading image<br>${images[currentImageIndex]}</p>`;
+      };
+
+      // Handle image load success
+      img.onload = function () {
+        loadingDiv.remove();
+        log(`Successfully loaded image: ${imgSrc}`);
+        img.addEventListener("click", () => {
+          showFullscreen(img.src, zoneObj.title);
+        });
+      };
+
+      sliderContainer.appendChild(img);
+      modalTitle.textContent = formatZoneTitle(zoneObj.title);
+      log(
+        `Showing image ${currentImageIndex + 1} of ${images.length} for ${
+          zoneObj.title
+        }`
+      );
+    }
+
+    // Next image
+    function nextImage() {
+      const zoneObj = allZones[currentZoneIndex];
+      if (!zoneObj) return;
+
+      const images = zoneObj.imagePaths;
+      currentImageIndex = (currentImageIndex + 1) % images.length;
+      showCurrentImage();
+    }
+
+    // Previous image
+    function prevImage() {
+      const zoneObj = allZones[currentZoneIndex];
+      if (!zoneObj) return;
+
+      const images = zoneObj.imagePaths;
+      currentImageIndex =
+        (currentImageIndex - 1 + images.length) % images.length;
+      showCurrentImage();
+    }
+
+    // Close modal
+    function closeModal() {
+      zoneModal.classList.remove("active");
+      resetTapState();
+    }
+
+    // Show fullscreen
+    function showFullscreen(src, title) {
+      fullscreenImageContainer.innerHTML = "";
+      const fsImg = document.createElement("img");
+      fsImg.src = src;
+      fsImg.alt = formatZoneTitle(title);
+      fullscreenImageContainer.appendChild(fsImg);
+      fullscreenView.classList.add("active");
+    }
+
+    // Close fullscreen
+    function closeFullscreen() {
+      fullscreenView.classList.remove("active");
+    }
+
+    // Format title
+    function formatZoneTitle(title) {
+      return title
+        .replace(/([A-Z])/g, " $1")
+        .replace(/^./, (str) => str.toUpperCase())
+        .trim();
+    }
+
+    // Find zone index by title
+    function findZoneIndexByTitle(title) {
+      return allZones.findIndex((z) => z.title === title);
+    }
+
+    // Close modal on click outside
+    zoneModal.addEventListener("click", function (e) {
+      if (e.target === zoneModal) {
+        closeModal();
+      }
+    });
+
+    // Close fullscreen on click outside
+    fullscreenView.addEventListener("click", function (e) {
+      if (e.target === fullscreenView) {
+        closeFullscreen();
+      }
+    });
+
+    // Start initialization
+    init();
+  });
+</script>
