@@ -86,7 +86,8 @@ document.addEventListener("DOMContentLoaded", function () {
   };
 
   // The base URL for root-level images in your GitHub repo
-  const imageBaseURL = "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@latest/";
+  const imageBaseURL =
+    "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@latest/images/";
 
   /**********************************************************
    * 2) Initialize
