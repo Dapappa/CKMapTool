@@ -215,26 +215,45 @@
 
     // Define image paths - this maps zone titles to their image paths
     const zoneImageMap = {
-      NorthWestAreaA: "north-west-area-a.jpg",
-      NorthWestAreaB: "Northwest Calgary Distribution Map (3)-1.png",
-      NorthWestAreaC: "Northwest Calgary Distribution Map (3)-3.png",
-      NorthEastAreaA: "North East-1.png",
-      NorthEastAreaB: "North East-2.png",
-      NorthEastAreaC: "North East-3.png",
-      DowntownAreaA: "Downtown Calgary Map (1)-1.png",
-      DowntownAreaB: "Downtown Calgary Map (1)-2.png",
-      SouthEastAreaA: "South East Completed (2)-1.png",
-      SouthEastAreaB: "South East Completed (2)-2.png",
-      SouthWestAreaA: "Southwest Map (2)-1.png",
-      SouthWestAreaB: "Southwest Map (2)-2.png",
+      NorthWestAreaA: [
+        "north-west-area-a.jpg",
+        "north-west-area-a-2.jpg",
+        "north-west-area-a-3.jpg",
+      ],
+      NorthWestAreaB: [
+        "Northwest Calgary Distribution Map (3)-1.png",
+        "Northwest Calgary Distribution Map (3)-2.png",
+      ],
+      NorthWestAreaC: ["Northwest Calgary Distribution Map (3)-3.png"],
+      NorthEastAreaA: [
+        "North East-1.png",
+        "North East-2.png",
+        "North East-3.png",
+      ],
+      NorthEastAreaB: ["North East-1.png", "North East-2.png"],
+      NorthEastAreaC: ["North East-3.png"],
+      DowntownAreaA: [
+        "Downtown Calgary Map (1)-1.png",
+        "Downtown Calgary Map (1)-2.png",
+      ],
+      DowntownAreaB: [
+        "Downtown Calgary Map (1)-1.png",
+        "Downtown Calgary Map (1)-2.png",
+      ],
+      SouthEastAreaA: [
+        "South East Completed (2)-1.png",
+        "South East Completed (2)-2.png",
+      ],
+      SouthEastAreaB: [
+        "South East Completed (2)-1.png",
+        "South East Completed (2)-2.png",
+      ],
+      SouthWestAreaA: ["Southwest Map (2)-1.png", "Southwest Map (2)-2.png"],
+      SouthWestAreaB: ["Southwest Map (2)-1.png", "Southwest Map (2)-2.png"],
     };
 
-    // Base URL for images - ensure we're loading from the project root
+    // Base URL for images - using the main branch which is more reliable than latest
     const imageBaseURL = "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/";
-
-    // Store all zone titles for navigation
-    const zoneTitles = Object.keys(zoneImageMap);
-    let currentZoneIndex = 0;
 
     // Helper function to format zone titles for display
     function formatZoneTitle(title) {
@@ -257,44 +276,65 @@
           const zoneTitle = this.getAttribute("title");
           console.log("Clicked zone:", zoneTitle);
 
-          // Find the index of this zone in our array for navigation
-          currentZoneIndex = zoneTitles.indexOf(zoneTitle);
+          // Set modal title
+          document.querySelector(".modal-title").textContent =
+            formatZoneTitle(zoneTitle);
 
-          // Show the zone image
-          showZoneImage(zoneTitle);
+          // Clear previous images
+          const sliderContainer = document.querySelector(".slider-container");
+          sliderContainer.innerHTML = "";
+
+          // Add images if available for this zone
+          if (zoneImageMap[zoneTitle]) {
+            const images = zoneImageMap[zoneTitle];
+
+            // Only proceed if we have images
+            if (images && images.length > 0) {
+              // Add first image
+              const img = document.createElement("img");
+              img.src = imageBaseURL + images[0];
+              img.alt = formatZoneTitle(zoneTitle);
+              img.className = "active";
+
+              // Add loading event to debug image loading issues
+              img.onload = function () {
+                console.log("Image loaded successfully:", images[0]);
+              };
+
+              img.onerror = function () {
+                console.error(
+                  "Failed to load image:",
+                  imageBaseURL + images[0]
+                );
+                // Show a placeholder or error message
+                this.src =
+                  "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+              };
+
+              sliderContainer.appendChild(img);
+
+              // Store current image index and zone info
+              sliderContainer.dataset.currentIndex = "0";
+              sliderContainer.dataset.zoneTitle = zoneTitle;
+
+              // Show/hide navigation buttons based on number of images
+              const prevButton = document.querySelector(".prev-button");
+              const nextButton = document.querySelector(".next-button");
+
+              if (images.length > 1) {
+                prevButton.style.display = "block";
+                nextButton.style.display = "block";
+              } else {
+                prevButton.style.display = "none";
+                nextButton.style.display = "none";
+              }
+            }
+          }
+
+          // Show modal
+          zoneModal.classList.add("active");
         });
       });
-
-      // Function to display a zone's image
-      function showZoneImage(zoneTitle) {
-        // Set modal title
-        document.querySelector(".modal-title").textContent =
-          formatZoneTitle(zoneTitle);
-
-        // Clear previous images
-        const sliderContainer = document.querySelector(".slider-container");
-        sliderContainer.innerHTML = "";
-
-        // Add image if available for this zone
-        if (zoneImageMap[zoneTitle]) {
-          const img = document.createElement("img");
-          img.src = imageBaseURL + zoneImageMap[zoneTitle];
-          img.alt = formatZoneTitle(zoneTitle);
-          img.className = "active";
-
-          // Add error handling for image loading
-          img.onerror = function () {
-            console.error(`Failed to load image: ${img.src}`);
-            this.src =
-              "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='150'><rect width='200' height='150' fill='%23f1f1f1'/><text x='100' y='75' text-anchor='middle' fill='%23999'>Image not found</text></svg>";
-          };
-
-          sliderContainer.appendChild(img);
-        }
-
-        // Show modal
-        zoneModal.classList.add("active");
-      }
 
       // Close button
       closeButton.addEventListener("click", function () {
@@ -305,19 +345,68 @@
       const prevButton = document.querySelector(".prev-button");
       const nextButton = document.querySelector(".next-button");
 
-      // Enable navigation buttons to slide between regions
-      prevButton.style.display = "block";
-      nextButton.style.display = "block";
+      // Default to hiding buttons - they'll be shown if needed
+      prevButton.style.display = "none";
+      nextButton.style.display = "none";
 
       prevButton.addEventListener("click", function () {
-        currentZoneIndex =
-          (currentZoneIndex - 1 + zoneTitles.length) % zoneTitles.length;
-        showZoneImage(zoneTitles[currentZoneIndex]);
+        const sliderContainer = document.querySelector(".slider-container");
+        const zoneTitle = sliderContainer.dataset.zoneTitle;
+        let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
+        const images = zoneImageMap[zoneTitle] || [];
+
+        if (images.length > 1) {
+          // Calculate previous index with wraparound
+          currentIndex = (currentIndex - 1 + images.length) % images.length;
+          sliderContainer.dataset.currentIndex = currentIndex.toString();
+
+          // Update image with error handling
+          const img = sliderContainer.querySelector("img");
+          const newSrc = imageBaseURL + images[currentIndex];
+          console.log("Loading previous image:", newSrc);
+
+          img.onload = function () {
+            console.log("Previous image loaded successfully");
+          };
+
+          img.onerror = function () {
+            console.error("Failed to load previous image:", newSrc);
+            this.src =
+              "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+          };
+
+          img.src = newSrc;
+        }
       });
 
       nextButton.addEventListener("click", function () {
-        currentZoneIndex = (currentZoneIndex + 1) % zoneTitles.length;
-        showZoneImage(zoneTitles[currentZoneIndex]);
+        const sliderContainer = document.querySelector(".slider-container");
+        const zoneTitle = sliderContainer.dataset.zoneTitle;
+        let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
+        const images = zoneImageMap[zoneTitle] || [];
+
+        if (images.length > 1) {
+          // Calculate next index with wraparound
+          currentIndex = (currentIndex + 1) % images.length;
+          sliderContainer.dataset.currentIndex = currentIndex.toString();
+
+          // Update image with error handling
+          const img = sliderContainer.querySelector("img");
+          const newSrc = imageBaseURL + images[currentIndex];
+          console.log("Loading next image:", newSrc);
+
+          img.onload = function () {
+            console.log("Next image loaded successfully");
+          };
+
+          img.onerror = function () {
+            console.error("Failed to load next image:", newSrc);
+            this.src =
+              "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+          };
+
+          img.src = newSrc;
+        }
       });
 
       window.mapInitialized = true;
