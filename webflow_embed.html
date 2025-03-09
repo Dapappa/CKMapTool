@@ -528,3 +528,143 @@
     }
   });
 </script>
+
+<!-- Add responsive image map handling for mobile devices -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Get the map image and all area elements
+    const mapImage = document.querySelector(".main-map");
+    const areas = document.querySelectorAll("area");
+
+    // Store original coordinates for each area
+    areas.forEach((area) => {
+      // Save original coords as a data attribute
+      area.setAttribute("data-original-coords", area.getAttribute("coords"));
+    });
+
+    // Function to scale coordinates based on image size
+    function scaleCoordinates() {
+      // Get the current dimensions of the map image
+      const currentWidth = mapImage.clientWidth;
+      const currentHeight = mapImage.clientHeight;
+
+      // Get the original/natural dimensions of the image
+      const originalWidth = mapImage.naturalWidth;
+      const originalHeight = mapImage.naturalHeight;
+
+      // Calculate scaling factors
+      const widthFactor = currentWidth / originalWidth;
+      const heightFactor = currentHeight / originalHeight;
+
+      console.log(
+        `Map scaled: ${widthFactor.toFixed(2)}x width, ${heightFactor.toFixed(
+          2
+        )}x height`
+      );
+
+      // Apply scaling to each area
+      areas.forEach((area) => {
+        const originalCoords = area.getAttribute("data-original-coords");
+
+        // If we haven't stored original coordinates yet, use current ones
+        if (!originalCoords) {
+          area.setAttribute(
+            "data-original-coords",
+            area.getAttribute("coords")
+          );
+          return;
+        }
+
+        // Split coordinates into array of numbers
+        const coords = originalCoords.split(",").map((coord) => {
+          // Parse coordinate to a number
+          const num = parseInt(coord, 10);
+
+          // Scale coordinate based on whether it's an x (even index) or y (odd index) coordinate
+          return num;
+        });
+
+        // Scale each coordinate appropriately
+        const scaledCoords = coords.map((coord, index) => {
+          // Even indices (0, 2, 4...) are X coordinates, scale by width
+          // Odd indices (1, 3, 5...) are Y coordinates, scale by height
+          return Math.round(
+            index % 2 === 0 ? coord * widthFactor : coord * heightFactor
+          );
+        });
+
+        // Set the new scaled coordinates
+        area.setAttribute("coords", scaledCoords.join(","));
+      });
+    }
+
+    // Scale coordinates initially
+    if (mapImage.complete) {
+      scaleCoordinates();
+    } else {
+      mapImage.onload = scaleCoordinates;
+    }
+
+    // Re-scale coordinates when window is resized
+    window.addEventListener("resize", scaleCoordinates);
+
+    // Additional handler for device orientation changes
+    window.addEventListener("orientationchange", function () {
+      // Small delay to allow for DOM updates
+      setTimeout(scaleCoordinates, 200);
+    });
+
+    // Debug function to visualize map areas (uncomment for testing)
+    /*
+    function debugMapAreas() {
+      const mapWrapper = document.querySelector('.map-wrapper');
+      const debugOverlay = document.createElement('div');
+      debugOverlay.style.position = 'absolute';
+      debugOverlay.style.top = '0';
+      debugOverlay.style.left = '0';
+      debugOverlay.style.width = '100%';
+      debugOverlay.style.height = '100%';
+      debugOverlay.style.pointerEvents = 'none';
+      
+      areas.forEach((area, index) => {
+        const coords = area.getAttribute('coords').split(',').map(Number);
+        const overlay = document.createElement('div');
+        overlay.style.position = 'absolute';
+        overlay.style.border = '2px solid rgba(255,0,0,0.5)';
+        overlay.style.backgroundColor = 'rgba(255,0,0,0.2)';
+        overlay.style.zIndex = '100';
+        overlay.style.pointerEvents = 'none';
+        
+        if (area.getAttribute('shape') === 'poly') {
+          // For polygons, create an SVG overlay
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.style.position = 'absolute';
+          svg.style.top = '0';
+          svg.style.left = '0';
+          svg.style.width = '100%';
+          svg.style.height = '100%';
+          svg.style.pointerEvents = 'none';
+          
+          const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+          const points = [];
+          for (let i = 0; i < coords.length; i += 2) {
+            points.push(`${coords[i]},${coords[i+1]}`);
+          }
+          polygon.setAttribute('points', points.join(' '));
+          polygon.setAttribute('fill', 'rgba(255,0,0,0.2)');
+          polygon.setAttribute('stroke', 'rgba(255,0,0,0.7)');
+          polygon.setAttribute('stroke-width', '2');
+          
+          svg.appendChild(polygon);
+          debugOverlay.appendChild(svg);
+        }
+      });
+      
+      mapWrapper.appendChild(debugOverlay);
+    }
+    
+    // Uncomment to enable debug visualization
+    // setTimeout(debugMapAreas, 1000);
+    */
+  });
+</script>
