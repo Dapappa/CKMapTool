@@ -213,53 +213,57 @@
     const zoneModal = document.querySelector(".zone-modal");
     const closeButton = document.querySelector(".close-button");
 
-    // Define image paths - this maps zone titles to their image paths
+    // Define image paths with direct CDN URLs, just like CSS and script references
     const zoneImageMap = {
       NorthWestAreaA: [
-        "Images/north-west-area-a.jpg",
-        "Images/north-west-area-a-2.jpg",
-        "Images/north-west-area-a-3.jpg",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/north-west-area-a.jpg",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/north-west-area-a-2.jpg",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/north-west-area-a-3.jpg",
       ],
       NorthWestAreaB: [
-        "Images/Northwest Calgary Distribution Map (3)-1.png",
-        "Images/Northwest Calgary Distribution Map (3)-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Northwest Calgary Distribution Map (3)-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Northwest Calgary Distribution Map (3)-2.png",
       ],
-      NorthWestAreaC: ["Images/Northwest Calgary Distribution Map (3)-3.png"],
+      NorthWestAreaC: [
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Northwest Calgary Distribution Map (3)-3.png",
+      ],
       NorthEastAreaA: [
-        "Images/North East-1.png",
-        "Images/North East-2.png",
-        "Images/North East-3.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/North East-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/North East-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/North East-3.png",
       ],
-      NorthEastAreaB: ["Images/North East-1.png", "Images/North East-2.png"],
-      NorthEastAreaC: ["Images/North East-3.png"],
+      NorthEastAreaB: [
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/North East-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/North East-2.png",
+      ],
+      NorthEastAreaC: [
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/North East-3.png",
+      ],
       DowntownAreaA: [
-        "Images/Downtown Calgary Map (1)-1.png",
-        "Images/Downtown Calgary Map (1)-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Downtown Calgary Map (1)-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Downtown Calgary Map (1)-2.png",
       ],
       DowntownAreaB: [
-        "Images/Downtown Calgary Map (1)-1.png",
-        "Images/Downtown Calgary Map (1)-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Downtown Calgary Map (1)-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Downtown Calgary Map (1)-2.png",
       ],
       SouthEastAreaA: [
-        "Images/South East Completed (2)-1.png",
-        "Images/South East Completed (2)-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/South East Completed (2)-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/South East Completed (2)-2.png",
       ],
       SouthEastAreaB: [
-        "Images/South East Completed (2)-1.png",
-        "Images/South East Completed (2)-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/South East Completed (2)-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/South East Completed (2)-2.png",
       ],
       SouthWestAreaA: [
-        "Images/Southwest Map (2)-1.png",
-        "Images/Southwest Map (2)-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Southwest Map (2)-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Southwest Map (2)-2.png",
       ],
       SouthWestAreaB: [
-        "Images/Southwest Map (2)-1.png",
-        "Images/Southwest Map (2)-2.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Southwest Map (2)-1.png",
+        "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/Southwest Map (2)-2.png",
       ],
     };
-
-    // Base URL for images - using the main branch which is more reliable than latest
-    const imageBaseURL = "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/";
 
     // Helper function to format zone titles for display
     function formatZoneTitle(title) {
@@ -298,7 +302,7 @@
             if (images && images.length > 0) {
               // Add first image
               const img = document.createElement("img");
-              const imageSrc = imageBaseURL + images[0];
+              const imageSrc = images[0]; // Direct URL, no need to add base URL
               img.src = imageSrc;
               img.alt = formatZoneTitle(zoneTitle);
               img.className = "active";
@@ -310,22 +314,9 @@
 
               img.onerror = function () {
                 console.error("❌ Failed to load image:", imageSrc);
-                // Try alternate paths
-                console.log("Trying alternate path without Images/ folder");
-                const alternateImagePath =
-                  imageBaseURL + images[0].replace("Images/", "");
-                console.log("Alternate path:", alternateImagePath);
-                this.src = alternateImagePath;
-
-                this.onerror = function () {
-                  console.error(
-                    "❌ Alternate path also failed:",
-                    alternateImagePath
-                  );
-                  // Show a placeholder or error message
-                  this.src =
-                    "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
-                };
+                // Show error icon if image fails to load
+                this.src =
+                  "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
               };
 
               sliderContainer.appendChild(img);
@@ -379,7 +370,7 @@
 
           // Update image with error handling
           const img = sliderContainer.querySelector("img");
-          const newSrc = imageBaseURL + images[currentIndex];
+          const newSrc = images[currentIndex]; // Direct URL, no need to add base URL
           console.log("Loading previous image:", newSrc);
 
           img.onload = function () {
@@ -388,17 +379,8 @@
 
           img.onerror = function () {
             console.error("Failed to load previous image:", newSrc);
-            // Try alternate path
-            const alternateImagePath =
-              imageBaseURL + images[currentIndex].replace("Images/", "");
-            console.log("Trying alternate path:", alternateImagePath);
-            this.src = alternateImagePath;
-
-            this.onerror = function () {
-              console.error("Alternate path also failed");
-              this.src =
-                "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
-            };
+            this.src =
+              "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
           };
 
           img.src = newSrc;
@@ -418,7 +400,7 @@
 
           // Update image with error handling
           const img = sliderContainer.querySelector("img");
-          const newSrc = imageBaseURL + images[currentIndex];
+          const newSrc = images[currentIndex]; // Direct URL, no need to add base URL
           console.log("Loading next image:", newSrc);
 
           img.onload = function () {
@@ -427,17 +409,8 @@
 
           img.onerror = function () {
             console.error("Failed to load next image:", newSrc);
-            // Try alternate path
-            const alternateImagePath =
-              imageBaseURL + images[currentIndex].replace("Images/", "");
-            console.log("Trying alternate path:", alternateImagePath);
-            this.src = alternateImagePath;
-
-            this.onerror = function () {
-              console.error("Alternate path also failed");
-              this.src =
-                "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
-            };
+            this.src =
+              "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
           };
 
           img.src = newSrc;
