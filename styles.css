@@ -25,6 +25,8 @@ body {
     align-items: center;
     min-height: 100vh;
     overflow-x: hidden;
+    padding: 0;
+    margin: 0;
 }
 
 /* Map container styles */
@@ -34,6 +36,10 @@ body {
     margin: 0 auto;
     width: 100%;
     overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
 }
 
 .map-wrapper {
@@ -51,8 +57,10 @@ body {
     display: block;
     max-width: 100%;
     height: auto;
-    width: 100%;
+    width: auto;
+    max-height: 90vh; /* Prevent the map from being too tall */
     object-fit: contain;
+    margin: 0 auto; /* Center the map */
 }
 
 /* Zone label styling - Updated with Komikatitle Axis, bigger, bolder and red */

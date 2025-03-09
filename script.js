@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (title && zoneImageMap[title]) {
                 allZones.push({
                     title: title,
-                    imagePath: `map-images/${zoneImageMap[title]}`
+                    imagePath: `${zoneImageMap[title]}`
                 });
             }
         });
