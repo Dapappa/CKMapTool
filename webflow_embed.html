@@ -215,41 +215,18 @@
 
     // Define image paths - this maps zone titles to their image paths
     const zoneImageMap = {
-      NorthWestAreaA: [
-        "north-west-area-a.jpg",
-        "north-west-area-a-2.jpg",
-        "north-west-area-a-3.jpg",
-      ],
-      NorthWestAreaB: [
-        "Northwest Calgary Distribution Map (3)-1.png",
-        "Northwest Calgary Distribution Map (3)-2.png",
-      ],
-      NorthWestAreaC: ["Northwest Calgary Distribution Map (3)-3.png"],
-      NorthEastAreaA: [
-        "North East-1.png",
-        "North East-2.png",
-        "North East-3.png",
-      ],
-      NorthEastAreaB: ["North East-1.png", "North East-2.png"],
-      NorthEastAreaC: ["North East-3.png"],
-      DowntownAreaA: [
-        "Downtown Calgary Map (1)-1.png",
-        "Downtown Calgary Map (1)-2.png",
-      ],
-      DowntownAreaB: [
-        "Downtown Calgary Map (1)-1.png",
-        "Downtown Calgary Map (1)-2.png",
-      ],
-      SouthEastAreaA: [
-        "South East Completed (2)-1.png",
-        "South East Completed (2)-2.png",
-      ],
-      SouthEastAreaB: [
-        "South East Completed (2)-1.png",
-        "South East Completed (2)-2.png",
-      ],
-      SouthWestAreaA: ["Southwest Map (2)-1.png", "Southwest Map (2)-2.png"],
-      SouthWestAreaB: ["Southwest Map (2)-1.png", "Southwest Map (2)-2.png"],
+      NorthWestAreaA: "north-west-area-a.jpg",
+      NorthWestAreaB: "Northwest Calgary Distribution Map (3)-1.png",
+      NorthWestAreaC: "Northwest Calgary Distribution Map (3)-3.png",
+      NorthEastAreaA: "North East-1.png",
+      NorthEastAreaB: "North East-2.png",
+      NorthEastAreaC: "North East-3.png",
+      DowntownAreaA: "Downtown Calgary Map (1)-1.png",
+      DowntownAreaB: "Downtown Calgary Map (1)-2.png",
+      SouthEastAreaA: "South East Completed (2)-1.png",
+      SouthEastAreaB: "South East Completed (2)-2.png",
+      SouthWestAreaA: "Southwest Map (2)-1.png",
+      SouthWestAreaB: "Southwest Map (2)-2.png",
     };
 
     // Base URL for images
@@ -286,20 +263,11 @@
 
           // Add images if available for this zone
           if (zoneImageMap[zoneTitle]) {
-            const images = zoneImageMap[zoneTitle];
-
-            // Add first image
-            if (images.length > 0) {
-              const img = document.createElement("img");
-              img.src = imageBaseURL + images[0];
-              img.alt = formatZoneTitle(zoneTitle);
-              img.className = "active";
-              sliderContainer.appendChild(img);
-
-              // Store current image index and images array for navigation
-              sliderContainer.dataset.currentIndex = "0";
-              sliderContainer.dataset.zoneTitle = zoneTitle;
-            }
+            const img = document.createElement("img");
+            img.src = imageBaseURL + zoneImageMap[zoneTitle];
+            img.alt = formatZoneTitle(zoneTitle);
+            img.className = "active";
+            sliderContainer.appendChild(img);
           }
 
           // Show modal
@@ -316,36 +284,16 @@
       const prevButton = document.querySelector(".prev-button");
       const nextButton = document.querySelector(".next-button");
 
+      // Hide navigation buttons since we only have one image per zone
+      prevButton.style.display = "none";
+      nextButton.style.display = "none";
+
       prevButton.addEventListener("click", function () {
-        const sliderContainer = document.querySelector(".slider-container");
-        const zoneTitle = sliderContainer.dataset.zoneTitle;
-        let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
-        const images = zoneImageMap[zoneTitle] || [];
-
-        if (images.length > 1) {
-          currentIndex = (currentIndex - 1 + images.length) % images.length;
-          sliderContainer.dataset.currentIndex = currentIndex.toString();
-
-          // Update image
-          const img = sliderContainer.querySelector("img");
-          img.src = imageBaseURL + images[currentIndex];
-        }
+        // Not needed since we only have one image per zone
       });
 
       nextButton.addEventListener("click", function () {
-        const sliderContainer = document.querySelector(".slider-container");
-        const zoneTitle = sliderContainer.dataset.zoneTitle;
-        let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
-        const images = zoneImageMap[zoneTitle] || [];
-
-        if (images.length > 1) {
-          currentIndex = (currentIndex + 1) % images.length;
-          sliderContainer.dataset.currentIndex = currentIndex.toString();
-
-          // Update image
-          const img = sliderContainer.querySelector("img");
-          img.src = imageBaseURL + images[currentIndex];
-        }
+        // Not needed since we only have one image per zone
       });
 
       window.mapInitialized = true;
