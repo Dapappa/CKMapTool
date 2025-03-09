@@ -175,14 +175,34 @@ document.addEventListener("DOMContentLoaded", function () {
    **********************************************************/
   function createAreaHighlights() {
     if (!mainMap.complete) {
+      console.log("Main map not yet loaded, waiting...");
       mainMap.onload = createAreaHighlights;
       return;
     }
 
-    mapAreas.forEach((area) => {
+    console.log("Creating area highlights for", mapAreas.length, "areas");
+
+    // Debug check if mapAreas is accessible
+    if (mapAreas.length === 0) {
+      console.error(
+        "ERROR: No map areas found! Check that the <map> and <area> tags are correct."
+      );
+      console.log(
+        "Map element exists:",
+        !!document.querySelector('map[name="image-map"]')
+      );
+      return;
+    }
+
+    mapAreas.forEach((area, index) => {
       if (area.getAttribute("shape") === "poly") {
         const coords = area.getAttribute("coords").split(",");
         const title = area.getAttribute("title");
+        console.log(
+          `Processing area ${index + 1}: ${title} with ${
+            coords.length / 2
+          } points`
+        );
 
         const svgNS = "http://www.w3.org/2000/svg";
         const svg = document.createElementNS(svgNS, "svg");
@@ -194,12 +214,17 @@ document.addEventListener("DOMContentLoaded", function () {
           left: "0",
           width: "100%",
           height: "100%",
+          pointerEvents: "none", // Make sure SVG doesn't block clicks
         });
 
         const polygon = document.createElementNS(svgNS, "polygon");
 
         const scaleX = mainMap.width / mainMap.naturalWidth;
         const scaleY = mainMap.height / mainMap.naturalHeight;
+
+        console.log(
+          `Map dimensions: ${mainMap.width}x${mainMap.height}, Scale: ${scaleX}x${scaleY}`
+        );
 
         let points = "";
         for (let i = 0; i < coords.length; i += 2) {
@@ -221,6 +246,93 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     window.addEventListener("resize", updateAreaHighlights);
+
+    // Make sure every area has event listeners properly attached
+    console.log("Setting up event listeners for map areas");
+    setupMapAreaInteraction();
+  }
+
+  /**********************************************************
+   * Enhanced map area interaction setup
+   **********************************************************/
+  function setupMapAreaInteraction() {
+    mapAreas.forEach((area, index) => {
+      const title = area.getAttribute("title");
+      console.log(`Setting up interactions for ${title}`);
+
+      // Make sure href="#" doesn't navigate
+      area.addEventListener("click", function (e) {
+        e.preventDefault();
+        console.log("Area clicked:", title);
+
+        userInteracted = true;
+        stopAutoCycle();
+
+        if (isFirstTap) {
+          handleFirstTap(title);
+        } else if (title === lastClickedZone) {
+          openZoneModal(title);
+        } else {
+          resetTapState();
+          handleFirstTap(title);
+        }
+      });
+
+      // On desktop hover
+      area.addEventListener("mouseover", function (e) {
+        console.log("Hover on:", title);
+        if (isMobile || lastClickedZone) return;
+        zoneLabel.textContent = formatZoneTitle(title);
+        zoneLabel.style.opacity = "1";
+        if (zoneHighlights[title]) {
+          zoneHighlights[title].style.opacity = "1";
+          zoneHighlights[title].style.transform = "scale(1.01)";
+        }
+        mapOverlay.style.opacity = "1";
+      });
+
+      area.addEventListener("mouseout", function () {
+        if (isMobile || lastClickedZone) return;
+        zoneLabel.style.opacity = "0";
+        if (zoneHighlights[title]) {
+          zoneHighlights[title].style.opacity = "0";
+          zoneHighlights[title].style.transform = "scale(1)";
+        }
+        mapOverlay.style.opacity = "0";
+      });
+    });
+
+    // Directly add a click handler to the image map as well
+    mainMap.addEventListener("click", function (e) {
+      const rect = mainMap.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      console.log(`Map clicked at ${x},${y}`);
+
+      // Find which area was clicked
+      for (let i = 0; i < mapAreas.length; i++) {
+        const area = mapAreas[i];
+        if (area.getAttribute("shape") === "poly") {
+          const coords = area.getAttribute("coords").split(",").map(Number);
+          if (isPointInPolygon(x, y, coords)) {
+            const title = area.getAttribute("title");
+            console.log("Found area:", title);
+            userInteracted = true;
+            stopAutoCycle();
+
+            if (isFirstTap) {
+              handleFirstTap(title);
+            } else if (title === lastClickedZone) {
+              openZoneModal(title);
+            } else {
+              resetTapState();
+              handleFirstTap(title);
+            }
+            break;
+          }
+        }
+      }
+    });
   }
 
   /**********************************************************

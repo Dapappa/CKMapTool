@@ -40,6 +40,7 @@ body {
   justify-content: center;
   align-items: center;
   height: 100vh;
+  cursor: pointer;
 }
 
 .map-wrapper {
@@ -61,6 +62,8 @@ body {
   max-height: 90vh; /* Prevent the map from being too tall */
   object-fit: contain;
   margin: 0 auto; /* Center the map */
+  position: relative;
+  z-index: 2;
 }
 
 /* Zone label styling - Updated with Komikatitle Axis, bigger, bolder and red */
@@ -152,7 +155,7 @@ body {
   }
 }
 
-/* Hover effect helpers */
+/* Hover effect helpers - updated for better visibility */
 .zone-highlight {
   position: absolute;
   pointer-events: none;
@@ -161,6 +164,10 @@ body {
   transition: opacity 0.3s ease, transform 0.3s ease;
   filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.2));
   transform: scale(1);
+}
+
+.zone-highlight polygon {
+  stroke-width: 3px;
 }
 
 .map-overlay {
@@ -508,4 +515,9 @@ body {
     overflow: hidden;
     width: 100%;
   }
+}
+
+/* Ensure the map has the correct pointer events */
+area {
+  cursor: pointer;
 }
