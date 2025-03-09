@@ -253,8 +253,7 @@
     };
 
     // Base URL for images
-    const imageBaseURL =
-      "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@latest/";
+    const imageBaseURL = "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@main/";
 
     // Helper function to format zone titles for display
     function formatZoneTitle(title) {
@@ -292,7 +291,7 @@
             // Add first image
             if (images.length > 0) {
               const img = document.createElement("img");
-              img.src = imageBaseURL + encodeURIComponent(images[0]);
+              img.src = imageBaseURL + images[0];
               img.alt = formatZoneTitle(zoneTitle);
               img.className = "active";
               sliderContainer.appendChild(img);
@@ -329,7 +328,7 @@
 
           // Update image
           const img = sliderContainer.querySelector("img");
-          img.src = imageBaseURL + encodeURIComponent(images[currentIndex]);
+          img.src = imageBaseURL + images[currentIndex];
         }
       });
 
@@ -345,7 +344,7 @@
 
           // Update image
           const img = sliderContainer.querySelector("img");
-          img.src = imageBaseURL + encodeURIComponent(images[currentIndex]);
+          img.src = imageBaseURL + images[currentIndex];
         }
       });
 
