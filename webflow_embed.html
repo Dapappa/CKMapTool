@@ -281,6 +281,7 @@
       areas.forEach((area) => {
         area.addEventListener("click", function (e) {
           e.preventDefault();
+          e.stopPropagation(); // Stop event propagation to prevent bubbling
 
           // Get zone title from the area
           const zoneTitle = this.getAttribute("title");
@@ -303,23 +304,39 @@
               // Add first image
               const img = document.createElement("img");
               const imageSrc = images[0];
-              img.src = imageSrc;
+
+              // Set these attributes before setting src to avoid FOUC (Flash of Unstyled Content)
               img.alt = formatZoneTitle(zoneTitle);
               img.className = "active";
+              img.style.maxWidth = "100%";
+              img.style.maxHeight = "60vh";
+              img.style.display = "block";
+              img.style.margin = "0 auto";
 
-              // Add loading event to debug image loading issues
-              img.onload = function () {
+              // Show a loading indicator while the image loads
+              sliderContainer.innerHTML =
+                '<div style="text-align: center; padding: 20px;">Loading image...</div>';
+
+              // Preload the image before showing
+              const preloadImg = new Image();
+              preloadImg.onload = function () {
+                // Replace loading indicator with actual image once loaded
+                sliderContainer.innerHTML = "";
+                img.src = imageSrc;
+                sliderContainer.appendChild(img);
                 console.log("✅ Image loaded successfully:", imageSrc);
               };
 
-              img.onerror = function () {
+              preloadImg.onerror = function () {
                 console.error("❌ Failed to load image:", imageSrc);
-                // No need to try alternate path, just show error icon
-                this.src =
+                sliderContainer.innerHTML = "";
+                img.src =
                   "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+                sliderContainer.appendChild(img);
               };
 
-              sliderContainer.appendChild(img);
+              // Start loading the image
+              preloadImg.src = imageSrc;
 
               // Store current image index and zone info
               sliderContainer.dataset.currentIndex = "0";
@@ -339,14 +356,32 @@
             }
           }
 
-          // Show modal
-          zoneModal.classList.add("active");
+          // Show modal with a slight delay to ensure proper rendering
+          setTimeout(() => {
+            zoneModal.classList.add("active");
+          }, 50);
         });
       });
 
-      // Close button
-      closeButton.addEventListener("click", function () {
+      // Close button - add explicit handling to prevent accidental closes
+      closeButton.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
         zoneModal.classList.remove("active");
+      });
+
+      // Prevent closing when clicking inside the modal content
+      document
+        .querySelector(".modal-content")
+        .addEventListener("click", function (e) {
+          e.stopPropagation();
+        });
+
+      // Only close when clicking the background
+      zoneModal.addEventListener("click", function (e) {
+        if (e.target === this) {
+          zoneModal.classList.remove("active");
+        }
       });
 
       // Navigation buttons
@@ -357,7 +392,10 @@
       prevButton.style.display = "none";
       nextButton.style.display = "none";
 
-      prevButton.addEventListener("click", function () {
+      prevButton.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
         const sliderContainer = document.querySelector(".slider-container");
         const zoneTitle = sliderContainer.dataset.zoneTitle;
         let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
@@ -368,27 +406,55 @@
           currentIndex = (currentIndex - 1 + images.length) % images.length;
           sliderContainer.dataset.currentIndex = currentIndex.toString();
 
-          // Update image with error handling
-          const img = sliderContainer.querySelector("img");
-          const newSrc = images[currentIndex]; // Direct URL
-          console.log("Loading previous image:", newSrc);
+          // Show loading indicator
+          sliderContainer.innerHTML =
+            '<div style="text-align: center; padding: 20px;">Loading image...</div>';
 
-          img.onload = function () {
-            console.log("Previous image loaded successfully");
+          // Preload the image
+          const preloadImg = new Image();
+          const newSrc = images[currentIndex];
+
+          preloadImg.onload = function () {
+            // Create and add the new image
+            const img = document.createElement("img");
+            img.src = newSrc;
+            img.alt = formatZoneTitle(zoneTitle);
+            img.className = "active";
+            img.style.maxWidth = "100%";
+            img.style.maxHeight = "60vh";
+            img.style.display = "block";
+            img.style.margin = "0 auto";
+
+            sliderContainer.innerHTML = "";
+            sliderContainer.appendChild(img);
+            console.log("Previous image loaded successfully:", newSrc);
           };
 
-          img.onerror = function () {
+          preloadImg.onerror = function () {
             console.error("Failed to load previous image:", newSrc);
-            // No need to try alternate path, just show error icon
-            this.src =
+            const img = document.createElement("img");
+            img.src =
               "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+            img.alt = "Error loading image";
+            img.className = "active";
+            img.style.maxWidth = "100%";
+            img.style.maxHeight = "60vh";
+            img.style.display = "block";
+            img.style.margin = "0 auto";
+
+            sliderContainer.innerHTML = "";
+            sliderContainer.appendChild(img);
           };
 
-          img.src = newSrc;
+          // Start loading the image
+          preloadImg.src = newSrc;
         }
       });
 
-      nextButton.addEventListener("click", function () {
+      nextButton.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
         const sliderContainer = document.querySelector(".slider-container");
         const zoneTitle = sliderContainer.dataset.zoneTitle;
         let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
@@ -399,24 +465,63 @@
           currentIndex = (currentIndex + 1) % images.length;
           sliderContainer.dataset.currentIndex = currentIndex.toString();
 
-          // Update image with error handling
-          const img = sliderContainer.querySelector("img");
-          const newSrc = images[currentIndex]; // Direct URL
-          console.log("Loading next image:", newSrc);
+          // Show loading indicator
+          sliderContainer.innerHTML =
+            '<div style="text-align: center; padding: 20px;">Loading image...</div>';
 
-          img.onload = function () {
-            console.log("Next image loaded successfully");
+          // Preload the image
+          const preloadImg = new Image();
+          const newSrc = images[currentIndex];
+
+          preloadImg.onload = function () {
+            // Create and add the new image
+            const img = document.createElement("img");
+            img.src = newSrc;
+            img.alt = formatZoneTitle(zoneTitle);
+            img.className = "active";
+            img.style.maxWidth = "100%";
+            img.style.maxHeight = "60vh";
+            img.style.display = "block";
+            img.style.margin = "0 auto";
+
+            sliderContainer.innerHTML = "";
+            sliderContainer.appendChild(img);
+            console.log("Next image loaded successfully:", newSrc);
           };
 
-          img.onerror = function () {
+          preloadImg.onerror = function () {
             console.error("Failed to load next image:", newSrc);
-            // No need to try alternate path, just show error icon
-            this.src =
+            const img = document.createElement("img");
+            img.src =
               "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+            img.alt = "Error loading image";
+            img.className = "active";
+            img.style.maxWidth = "100%";
+            img.style.maxHeight = "60vh";
+            img.style.display = "block";
+            img.style.margin = "0 auto";
+
+            sliderContainer.innerHTML = "";
+            sliderContainer.appendChild(img);
           };
 
-          img.src = newSrc;
+          // Start loading the image
+          preloadImg.src = newSrc;
         }
+      });
+
+      // Close modal when ESC key is pressed
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && zoneModal.classList.contains("active")) {
+          zoneModal.classList.remove("active");
+        }
+      });
+
+      // Prevent default behavior on touchstart for mobile
+      areas.forEach((area) => {
+        area.addEventListener("touchstart", function (e) {
+          e.preventDefault();
+        });
       });
 
       window.mapInitialized = true;
