@@ -4,19 +4,258 @@
   rel="stylesheet"
 />
 
-<!-- External CSS files -->
+<!-- External CSS (via jsDelivr) -->
 <link
   rel="stylesheet"
   href="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/styles.css"
 />
-<link
-  rel="stylesheet"
-  href="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/mobile.css"
-/>
-<link
-  rel="stylesheet"
-  href="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/modal.css"
-/>
+
+<!-- Adding inline styles to ensure visibility -->
+<style>
+  .zone-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .zone-modal.active {
+    display: flex !important;
+  }
+
+  .modal-content {
+    background-color: #fff;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-header {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    position: relative;
+  }
+
+  .modal-title {
+    margin: 0;
+    font-size: 1.5rem;
+    text-align: center;
+  }
+
+  .close-button {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 28px;
+    font-weight: bold;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+  }
+
+  .image-slider {
+    position: relative;
+    padding: 15px;
+  }
+
+  .image-slider img {
+    max-width: 100%;
+    max-height: 60vh;
+    display: block;
+    margin: 0 auto;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    border-radius: 4px;
+  }
+
+  .image-slider img:hover {
+    transform: scale(1.02);
+  }
+
+  .slider-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-height: 200px;
+    margin-bottom: 10px;
+    background-color: #f8f8f8;
+    border-radius: 4px;
+    padding: 10px;
+  }
+
+  .prev-button,
+  .next-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2;
+    transition: background-color 0.3s;
+  }
+
+  .prev-button:hover,
+  .next-button:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+
+  .prev-button {
+    left: 10px;
+  }
+
+  .next-button {
+    right: 10px;
+  }
+
+  /* Initial overlay styling */
+  .initial-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+    z-index: 10;
+    visibility: visible;
+  }
+
+  .initial-overlay.fade-out {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .instruction-text {
+    color: white;
+    font-size: 24px;
+    text-align: center;
+    padding: 15px 25px;
+    background-color: rgba(0, 0, 0, 0.6);
+    border-radius: 8px;
+    max-width: 80%;
+    font-weight: bold;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+  }
+
+  /* Fullscreen view styling */
+  .fullscreen-view {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .fullscreen-view.active {
+    display: flex !important;
+  }
+
+  .fullscreen-image-container {
+    position: relative;
+    width: 90%;
+    height: 90%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .fullscreen-image-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+  }
+
+  .close-fullscreen {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 36px;
+    color: white;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    z-index: 2001;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    transition: background-color 0.3s;
+  }
+
+  .close-fullscreen:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+
+  /* Responsive styles */
+  @media (max-width: 768px) {
+    .instruction-text {
+      font-size: 18px;
+      padding: 12px 20px;
+    }
+
+    .modal-title {
+      font-size: 1.2rem;
+    }
+
+    .prev-button,
+    .next-button {
+      width: 32px;
+      height: 32px;
+      font-size: 16px;
+    }
+
+    .close-fullscreen {
+      top: 15px;
+      right: 15px;
+      font-size: 28px;
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .instruction-text {
+      font-size: 16px;
+      padding: 10px 15px;
+    }
+
+    .slider-container {
+      min-height: 150px;
+    }
+  }
+</style>
 
 <div class="map-container">
   <!-- The main map with image map areas -->
@@ -135,36 +374,6 @@
   </map>
 </div>
 
-<!-- Mobile Regions Grid - Only shown on mobile devices -->
-<div class="mobile-regions-container">
-  <div class="mobile-regions-row">
-    <div class="mobile-region nw-region" data-region="NorthWest">NW</div>
-    <div class="mobile-region ne-region" data-region="NorthEast">NE</div>
-  </div>
-  <div class="mobile-regions-row single">
-    <div class="mobile-region downtown-region" data-region="Downtown">
-      Downtown
-    </div>
-  </div>
-  <div class="mobile-regions-row">
-    <div class="mobile-region sw-region" data-region="SouthWest">SW</div>
-    <div class="mobile-region se-region" data-region="SouthEast">SE</div>
-  </div>
-</div>
-
-<!-- Mobile 3D Carousel - Only shown on mobile devices -->
-<div class="mobile-carousel-container">
-  <div class="mobile-carousel">
-    <!-- Carousel items will be dynamically added here -->
-  </div>
-  <div class="carousel-controls">
-    <button class="carousel-button carousel-prev">&larr;</button>
-    <button class="carousel-button carousel-next">&rarr;</button>
-  </div>
-  <button class="carousel-close">&times;</button>
-  <button class="view-fullscreen-button">View Full Screen</button>
-</div>
-
 <!-- The zone modal for displaying images -->
 <div class="zone-modal">
   <div class="modal-content">
@@ -192,16 +401,697 @@
   </div>
 </div>
 
-<!-- External JS files -->
+<!-- External JS (via jsDelivr) -->
 <script
   src="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/script.js"
   defer
 ></script>
-<script
-  src="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/modal.js"
-  defer
-></script>
-<script
-  src="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/mobile.js"
-  defer
-></script>
+
+<!-- Fallback script to ensure functionality -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Make sure zone modal can be activated
+    const areas = document.querySelectorAll("area");
+    const zoneModal = document.querySelector(".zone-modal");
+    const closeButton = document.querySelector(".close-button");
+    const mapImage = document.querySelector(".main-map");
+    const mapWrapper = document.querySelector(".map-wrapper");
+    const initialOverlay = document.querySelector(".initial-overlay");
+    const fullscreenView = document.querySelector(".fullscreen-view");
+    const closeFullscreenButton = document.querySelector(".close-fullscreen");
+
+    // Define image paths with exact filenames from the repository
+    const zoneImageMap = {
+      NorthWestAreaA: [
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152ca79e102efac06d9c_Northwest%20Calgary%20Distribution%20Map%20(3)-1.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152cf32904d35d17f639_Northwest%20Calgary%20Distribution%20Map%20(3)-2.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152d08ea1ae1f650e810_Northwest%20Calgary%20Distribution%20Map%20(3)-3.png",
+      ],
+      NorthWestAreaB: [
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152ca79e102efac06d9c_Northwest%20Calgary%20Distribution%20Map%20(3)-1.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152cf32904d35d17f639_Northwest%20Calgary%20Distribution%20Map%20(3)-2.png",
+      ],
+      NorthWestAreaC: [
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152ca79e102efac06d9c_Northwest%20Calgary%20Distribution%20Map%20(3)-1.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152cf32904d35d17f639_Northwest%20Calgary%20Distribution%20Map%20(3)-2.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152d08ea1ae1f650e810_Northwest%20Calgary%20Distribution%20Map%20(3)-3.png",
+      ],
+      NorthEastAreaA: [
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152c2d59410587b5d1bf_North%20East-1.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152ce965c5b385b91dbc_North%20East-2.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152d32c401d798b756d5_North%20East-3.png",
+      ],
+      NorthEastAreaB: [
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152c2d59410587b5d1bf_North%20East-1.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152ce965c5b385b91dbc_North%20East-2.png",
+      ],
+      NorthEastAreaC: [
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152c2d59410587b5d1bf_North%20East-1.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152ce965c5b385b91dbc_North%20East-2.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152d32c401d798b756d5_North%20East-3.png",
+      ],
+      DowntownAreaA: [
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce1656df0450fd7aa4d763_Downtown%20Calgary%20Map%20(1)-1.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce16564099212dfea6b2b2_Downtown%20Calgary%20Map%20(1)-2.png",
+      ],
+      DowntownAreaB: [
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce1656df0450fd7aa4d763_Downtown%20Calgary%20Map%20(1)-1.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce16564099212dfea6b2b2_Downtown%20Calgary%20Map%20(1)-2.png",
+      ],
+      SouthEastAreaA: [
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67c1d2b874833dd5316b3ca8_South%20East%20Completed-2.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67c1d2b874833dd5316b3ca8_South%20East%20Completed-2.png",
+      ],
+      SouthEastAreaB: [
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67c1d2b874833dd5316b3ca8_South%20East%20Completed-2.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67c1d2b874833dd5316b3ca8_South%20East%20Completed-2.png",
+      ],
+      SouthWestAreaA: [
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152c3c238822c45316cd_Southwest%20Map%20(2)-1.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152c530f75df6093d3d7_Southwest%20Map%20(2)-2.png",
+      ],
+      SouthWestAreaB: [
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152c3c238822c45316cd_Southwest%20Map%20(2)-1.png",
+        "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152c530f75df6093d3d7_Southwest%20Map%20(2)-2.png",
+      ],
+    };
+
+    // Helper function to format zone titles for display
+    function formatZoneTitle(title) {
+      return title
+        .replace(/([A-Z])/g, " $1")
+        .replace(/^./, (str) => str.toUpperCase())
+        .trim();
+    }
+
+    // Store area coordinates for direct click detection
+    const areaCoordinates = [];
+
+    // Parse coordinates from area elements
+    function parseCoordinates() {
+      areaCoordinates.length = 0; // Clear existing coordinates
+
+      areas.forEach((area) => {
+        const coords = area.getAttribute("coords").split(",").map(Number);
+        const shape = area.getAttribute("shape");
+        const title = area.getAttribute("title");
+
+        if (shape === "poly") {
+          // Create an array of points
+          const points = [];
+          for (let i = 0; i < coords.length; i += 2) {
+            points.push({ x: coords[i], y: coords[i + 1] });
+          }
+          areaCoordinates.push({ shape, points, title });
+        } else if (shape === "rect") {
+          areaCoordinates.push({
+            shape,
+            points: [
+              { x: coords[0], y: coords[1] }, // top-left
+              { x: coords[2], y: coords[3] }, // bottom-right
+            ],
+            title,
+          });
+        } else if (shape === "circle") {
+          areaCoordinates.push({
+            shape,
+            points: [
+              { x: coords[0], y: coords[1] }, // center
+              { radius: coords[2] }, // radius
+            ],
+            title,
+          });
+        }
+      });
+
+      console.log("Parsed coordinates:", areaCoordinates);
+    }
+
+    // Calculate scale ratio for the image
+    function getImageScaleRatio() {
+      // Get the original dimensions
+      const naturalWidth = mapImage.naturalWidth;
+      const naturalHeight = mapImage.naturalHeight;
+
+      // Get current dimensions
+      const currentWidth = mapImage.offsetWidth;
+      const currentHeight = mapImage.offsetHeight;
+
+      const scaleX = currentWidth / naturalWidth;
+      const scaleY = currentHeight / naturalHeight;
+
+      console.log(`Scale ratio: ${scaleX.toFixed(2)}x, ${scaleY.toFixed(2)}y`);
+
+      return { scaleX, scaleY };
+    }
+
+    // Function to check if a point is inside a polygon
+    function isPointInPoly(point, poly) {
+      const { scaleX, scaleY } = getImageScaleRatio();
+      let inside = false;
+
+      // Scale the point according to the image scale
+      const scaledPoint = {
+        x: point.x / scaleX,
+        y: point.y / scaleY,
+      };
+
+      // Ray casting algorithm
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const xi = poly[i].x,
+          yi = poly[i].y;
+        const xj = poly[j].x,
+          yj = poly[j].y;
+
+        const intersect =
+          yi > scaledPoint.y !== yj > scaledPoint.y &&
+          scaledPoint.x < ((xj - xi) * (scaledPoint.y - yi)) / (yj - yi) + xi;
+
+        if (intersect) inside = !inside;
+      }
+
+      return inside;
+    }
+
+    // Function to check if a point is in a circle
+    function isPointInCircle(point, center, radius) {
+      const { scaleX, scaleY } = getImageScaleRatio();
+
+      // Scale the point and radius
+      const scaledPoint = {
+        x: point.x / scaleX,
+        y: point.y / scaleY,
+      };
+
+      const scaledRadius = radius / Math.min(scaleX, scaleY);
+
+      // Distance formula
+      const distance = Math.sqrt(
+        Math.pow(scaledPoint.x - center.x, 2) +
+          Math.pow(scaledPoint.y - center.y, 2)
+      );
+
+      return distance <= scaledRadius;
+    }
+
+    // Function to check if a point is in a rectangle
+    function isPointInRect(point, topLeft, bottomRight) {
+      const { scaleX, scaleY } = getImageScaleRatio();
+
+      // Scale the point
+      const scaledPoint = {
+        x: point.x / scaleX,
+        y: point.y / scaleY,
+      };
+
+      return (
+        scaledPoint.x >= topLeft.x &&
+        scaledPoint.x <= bottomRight.x &&
+        scaledPoint.y >= topLeft.y &&
+        scaledPoint.y <= bottomRight.y
+      );
+    }
+
+    // Initialize the coordinates on load
+    parseCoordinates();
+
+    // Update coordinates when window resizes
+    window.addEventListener("resize", parseCoordinates);
+
+    // Find which area was clicked based on coordinates
+    function findClickedArea(x, y) {
+      for (const area of areaCoordinates) {
+        if (area.shape === "poly") {
+          if (isPointInPoly({ x: x, y: y }, area.points)) {
+            return area;
+          }
+        } else if (area.shape === "circle") {
+          if (
+            isPointInCircle(
+              { x: x, y: y },
+              area.points[0],
+              area.points[1].radius
+            )
+          ) {
+            return area;
+          }
+        } else if (area.shape === "rect") {
+          if (isPointInRect({ x: x, y: y }, area.points[0], area.points[1])) {
+            return area;
+          }
+        }
+      }
+      return null;
+    }
+
+    // Handle direct click on the map image
+    mapImage.addEventListener("click", function (e) {
+      e.preventDefault();
+
+      // Get click coordinates relative to the image
+      const rect = mapImage.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      console.log(`Clicked at: ${clickX}, ${clickY}`);
+
+      // Find which area was clicked
+      const clickedArea = findClickedArea(clickX, clickY);
+
+      if (clickedArea) {
+        console.log("Clicked on area:", clickedArea.title);
+        // Remove the initial overlay after a click
+        fadeOutOverlay();
+        // Now show the modal with the appropriate images
+        showZoneModal(clickedArea.title);
+      } else {
+        console.log("No area clicked");
+      }
+    });
+
+    // Function to show the zone modal with images
+    function showZoneModal(zoneTitle) {
+      // Set modal title
+      document.querySelector(".modal-title").textContent =
+        formatZoneTitle(zoneTitle);
+
+      // Clear previous images
+      const sliderContainer = document.querySelector(".slider-container");
+      sliderContainer.innerHTML = "";
+
+      // Add images if available for this zone
+      if (zoneImageMap[zoneTitle]) {
+        const images = zoneImageMap[zoneTitle];
+
+        // Only proceed if we have images
+        if (images && images.length > 0) {
+          // Add first image
+          const img = document.createElement("img");
+          const imageSrc = images[0];
+
+          // Set these attributes before setting src to avoid FOUC (Flash of Unstyled Content)
+          img.alt = formatZoneTitle(zoneTitle);
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          // Show a loading indicator while the image loads
+          sliderContainer.innerHTML =
+            '<div style="text-align: center; padding: 20px;">Loading image...</div>';
+
+          // Preload the image before showing
+          const preloadImg = new Image();
+          preloadImg.onload = function () {
+            // Replace loading indicator with actual image once loaded
+            sliderContainer.innerHTML = "";
+            img.src = imageSrc;
+            sliderContainer.appendChild(img);
+            console.log("✅ Image loaded successfully:", imageSrc);
+
+            // Add click event to show fullscreen
+            img.addEventListener("click", function () {
+              showFullscreen(imageSrc, zoneTitle);
+            });
+          };
+
+          preloadImg.onerror = function () {
+            console.error("❌ Failed to load image:", imageSrc);
+            sliderContainer.innerHTML = "";
+            img.src =
+              "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+            sliderContainer.appendChild(img);
+          };
+
+          // Start loading the image
+          preloadImg.src = imageSrc;
+
+          // Store current image index and zone info
+          sliderContainer.dataset.currentIndex = "0";
+          sliderContainer.dataset.zoneTitle = zoneTitle;
+
+          // Show/hide navigation buttons based on number of images
+          const prevButton = document.querySelector(".prev-button");
+          const nextButton = document.querySelector(".next-button");
+
+          if (images.length > 1) {
+            prevButton.style.display = "block";
+            nextButton.style.display = "block";
+          } else {
+            prevButton.style.display = "none";
+            nextButton.style.display = "none";
+          }
+        }
+      }
+
+      // Show modal with a slight delay to ensure proper rendering
+      setTimeout(() => {
+        zoneModal.classList.add("active");
+      }, 50);
+    }
+
+    // Function to show fullscreen image
+    function showFullscreen(src, title) {
+      const container = document.querySelector(".fullscreen-image-container");
+      container.innerHTML = "";
+
+      // Create new image
+      const img = document.createElement("img");
+
+      // Show loading indicator
+      container.innerHTML =
+        '<div style="color: white; text-align: center; font-size: 18px;">Loading full resolution image...</div>';
+
+      // Preload image
+      const preloadImg = new Image();
+      preloadImg.onload = function () {
+        container.innerHTML = "";
+        img.src = src;
+        img.alt = formatZoneTitle(title);
+        container.appendChild(img);
+      };
+
+      preloadImg.onerror = function () {
+        container.innerHTML =
+          '<div style="color: red; text-align: center; font-size: 18px;">Error loading image</div>';
+      };
+
+      // Start loading
+      preloadImg.src = src;
+
+      // Show the fullscreen view
+      fullscreenView.classList.add("active");
+    }
+
+    // Close fullscreen view
+    function closeFullscreen() {
+      fullscreenView.classList.remove("active");
+    }
+
+    // Add click handlers to all areas as a fallback
+    areas.forEach((area) => {
+      area.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation(); // Stop event propagation to prevent bubbling
+
+        // Get zone title from the area
+        const zoneTitle = this.getAttribute("title");
+        console.log("Fallback clicked zone:", zoneTitle);
+
+        // Fade out the overlay
+        fadeOutOverlay();
+
+        // Use the same function to show the modal
+        showZoneModal(zoneTitle);
+      });
+    });
+
+    // Function to fade out the initial overlay
+    function fadeOutOverlay() {
+      if (initialOverlay) {
+        initialOverlay.classList.add("fade-out");
+      }
+    }
+
+    // Automatically fade out the initial overlay after 5 seconds
+    setTimeout(fadeOutOverlay, 5000);
+
+    // Improve touch handling for mobile
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchMoved = false;
+    const touchThreshold = 10; // Threshold to detect if touch was a tap or a scroll
+
+    mapImage.addEventListener(
+      "touchstart",
+      function (e) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchMoved = false;
+      },
+      { passive: true }
+    );
+
+    mapImage.addEventListener(
+      "touchmove",
+      function () {
+        touchMoved = true;
+      },
+      { passive: true }
+    );
+
+    mapImage.addEventListener("touchend", function (e) {
+      // Only consider it a tap if the touch didn't move much
+      if (
+        !touchMoved ||
+        (Math.abs(e.changedTouches[0].clientX - touchStartX) < touchThreshold &&
+          Math.abs(e.changedTouches[0].clientY - touchStartY) < touchThreshold)
+      ) {
+        e.preventDefault();
+
+        // Get touch coordinates relative to the image
+        const rect = mapImage.getBoundingClientRect();
+        const touchX = e.changedTouches[0].clientX - rect.left;
+        const touchY = e.changedTouches[0].clientY - rect.top;
+
+        console.log(`Touched at: ${touchX}, ${touchY}`);
+
+        // Find which area was touched
+        const touchedArea = findClickedArea(touchX, touchY);
+
+        if (touchedArea) {
+          console.log("Touched area:", touchedArea.title);
+          fadeOutOverlay();
+          showZoneModal(touchedArea.title);
+        } else {
+          console.log("No area touched");
+        }
+      }
+    });
+
+    // Close button - add explicit handling to prevent accidental closes
+    closeButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      zoneModal.classList.remove("active");
+    });
+
+    // Close fullscreen button handler
+    closeFullscreenButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeFullscreen();
+    });
+
+    // Prevent closing when clicking inside the modal content
+    document
+      .querySelector(".modal-content")
+      .addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+
+    // Only close when clicking the background
+    zoneModal.addEventListener("click", function (e) {
+      if (e.target === this) {
+        zoneModal.classList.remove("active");
+      }
+    });
+
+    // Only close fullscreen when clicking the background
+    fullscreenView.addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeFullscreen();
+      }
+    });
+
+    // Navigation buttons
+    const prevButton = document.querySelector(".prev-button");
+    const nextButton = document.querySelector(".next-button");
+
+    // Default to hiding buttons - they'll be shown if needed
+    prevButton.style.display = "none";
+    nextButton.style.display = "none";
+
+    prevButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const sliderContainer = document.querySelector(".slider-container");
+      const zoneTitle = sliderContainer.dataset.zoneTitle;
+      let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
+      const images = zoneImageMap[zoneTitle] || [];
+
+      if (images.length > 1) {
+        // Calculate previous index with wraparound
+        currentIndex = (currentIndex - 1 + images.length) % images.length;
+        sliderContainer.dataset.currentIndex = currentIndex.toString();
+
+        // Show loading indicator
+        sliderContainer.innerHTML =
+          '<div style="text-align: center; padding: 20px;">Loading image...</div>';
+
+        // Preload the image
+        const preloadImg = new Image();
+        const newSrc = images[currentIndex];
+
+        preloadImg.onload = function () {
+          // Create and add the new image
+          const img = document.createElement("img");
+          img.src = newSrc;
+          img.alt = formatZoneTitle(zoneTitle);
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          sliderContainer.innerHTML = "";
+          sliderContainer.appendChild(img);
+          console.log("Previous image loaded successfully:", newSrc);
+
+          // Add click event to show fullscreen
+          img.addEventListener("click", function () {
+            showFullscreen(newSrc, zoneTitle);
+          });
+        };
+
+        preloadImg.onerror = function () {
+          console.error("Failed to load previous image:", newSrc);
+          const img = document.createElement("img");
+          img.src =
+            "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+          img.alt = "Error loading image";
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          sliderContainer.innerHTML = "";
+          sliderContainer.appendChild(img);
+        };
+
+        // Start loading the image
+        preloadImg.src = newSrc;
+      }
+    });
+
+    nextButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const sliderContainer = document.querySelector(".slider-container");
+      const zoneTitle = sliderContainer.dataset.zoneTitle;
+      let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
+      const images = zoneImageMap[zoneTitle] || [];
+
+      if (images.length > 1) {
+        // Calculate next index with wraparound
+        currentIndex = (currentIndex + 1) % images.length;
+        sliderContainer.dataset.currentIndex = currentIndex.toString();
+
+        // Show loading indicator
+        sliderContainer.innerHTML =
+          '<div style="text-align: center; padding: 20px;">Loading image...</div>';
+
+        // Preload the image
+        const preloadImg = new Image();
+        const newSrc = images[currentIndex];
+
+        preloadImg.onload = function () {
+          // Create and add the new image
+          const img = document.createElement("img");
+          img.src = newSrc;
+          img.alt = formatZoneTitle(zoneTitle);
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          sliderContainer.innerHTML = "";
+          sliderContainer.appendChild(img);
+          console.log("Next image loaded successfully:", newSrc);
+
+          // Add click event to show fullscreen
+          img.addEventListener("click", function () {
+            showFullscreen(newSrc, zoneTitle);
+          });
+        };
+
+        preloadImg.onerror = function () {
+          console.error("Failed to load next image:", newSrc);
+          const img = document.createElement("img");
+          img.src =
+            "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+          img.alt = "Error loading image";
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          sliderContainer.innerHTML = "";
+          sliderContainer.appendChild(img);
+        };
+
+        // Start loading the image
+        preloadImg.src = newSrc;
+      }
+    });
+
+    // Close modal when ESC key is pressed
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        if (fullscreenView.classList.contains("active")) {
+          closeFullscreen();
+        } else if (zoneModal.classList.contains("active")) {
+          zoneModal.classList.remove("active");
+        }
+      }
+    });
+
+    // Update initial overlay opacity after a delay
+    setTimeout(() => {
+      if (initialOverlay) {
+        initialOverlay.style.opacity = "1";
+      }
+    }, 500);
+
+    // Show initial coordinates in console
+    mapImage.addEventListener("load", function () {
+      console.log(
+        "Map image loaded - dimensions:",
+        mapImage.offsetWidth,
+        "x",
+        mapImage.offsetHeight
+      );
+      parseCoordinates();
+    });
+
+    // Load a mobile-optimized SVG if on small screens
+    function checkScreenSize() {
+      // If window width is less than 768px, we're on mobile
+      if (
+        window.innerWidth < 768 &&
+        !mapImage.hasAttribute("data-mobile-loaded")
+      ) {
+        console.log("Loading mobile-optimized map...");
+        // Mark that we've already loaded the mobile version to avoid reloading
+        mapImage.setAttribute("data-mobile-loaded", "true");
+
+        // You would need a mobile-optimized SVG file in your repository
+        // The following is just an example - the actual file would need to exist
+        // mapImage.src = "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/City%20Map%20Mobile.svg";
+      }
+    }
+
+    // Check on load and resize
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+
+    window.mapInitialized = true;
+    console.log("Map initialized successfully");
+  });
+</script>
