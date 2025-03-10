@@ -1,0 +1,13 @@
+{
+  "folders": [
+	{
+		"path": "."
+	},
+	{
+		"path": "../CK_SalesTool/public/interactive-map"
+	}
+],
+  "settings": {
+    "liveServer.settings.multiRootWorkspaceName": "CKMapTool"
+  }
+}
