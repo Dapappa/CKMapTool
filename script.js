@@ -62,6 +62,12 @@ document.addEventListener("DOMContentLoaded", function () {
       createDebugOverlay();
     }
 
+    // Ensure the map container doesn't block scrolling
+    if (mapContainer) {
+      // Allow touch events to be handled by the browser for scrolling
+      mapContainer.style.touchAction = "pan-y";
+    }
+
     // Build the zones array from <area> + zoneImageMap
     initializeZones();
 
@@ -344,28 +350,19 @@ document.addEventListener("DOMContentLoaded", function () {
     mainMap.addEventListener(
       "touchstart",
       function (e) {
-        // Prevent zooming but allow scrolling
-        if (e.touches.length > 1) {
-          return; // Allow multi-touch gestures to pass through
-        }
+        // Don't prevent default here - allow natural scrolling
+        // Only track touch start position
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchMoved = false;
       },
-      { passive: true }
+      { passive: true } // Using passive listener improves scroll performance
     );
 
     // Track touch movement to distinguish between taps and scrolls
     let touchStartX, touchStartY;
     let touchMoved = false;
     const touchThreshold = isMobile ? 15 : 10; // Higher threshold for mobile
-
-    mainMap.addEventListener(
-      "touchstart",
-      (e) => {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        touchMoved = false;
-      },
-      { passive: true }
-    );
 
     mainMap.addEventListener(
       "touchmove",
@@ -386,9 +383,7 @@ document.addEventListener("DOMContentLoaded", function () {
       // Only process if it was a tap, not a scroll
       if (touchMoved) return;
 
-      e.preventDefault(); // Prevent any default touch behavior like zooming
-
-      // Calculate touch coordinates relative to the map
+      // Get touch coordinates relative to the map
       const mapRect = mainMap.getBoundingClientRect();
       const touch = e.changedTouches[0];
 
@@ -440,6 +435,9 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       if (touchedArea) {
+        // Only prevent default if we're actually handling a map area touch
+        e.preventDefault();
+
         const title = touchedArea.getAttribute("title");
         userInteracted = true;
         stopAutoCycle();
