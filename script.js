@@ -1,115 +1,100 @@
+/**********************************************************
+ * CKMapTool - Interactive Map Tool with Dynamic Image Loading
+ *
+ * Enhanced for all device sizes with improved coordinate mapping
+ *********************************************************/
+
 document.addEventListener("DOMContentLoaded", function () {
+  // Don't run if this is initialization from CDN
+  if (window.mapInitialized) {
+    console.log("Map already initialized, skipping duplicate initialization");
+    return;
+  }
+
+  /**********************************************************
+   * 1) Global Variables and DOM Elements
+   **********************************************************/
   // DOM elements
-  const mapWrapper = document.querySelector(".map-wrapper");
+  const mapContainer = document.querySelector(".map-container");
   const mainMap = document.querySelector(".main-map");
+  const mapWrapper = document.querySelector(".map-wrapper");
+  const mapAreas = document.querySelectorAll("map[name='image-map'] area");
   const zoneLabel = document.querySelector(".zone-label");
+  const initialOverlay = document.querySelector(".initial-overlay");
   const zoneModal = document.querySelector(".zone-modal");
-  const modalTitle = document.querySelector(".modal-title");
-  const closeButton = document.querySelector(".close-button");
   const sliderContainer = document.querySelector(".slider-container");
+  const modalTitle = document.querySelector(".modal-title");
   const prevButton = document.querySelector(".prev-button");
   const nextButton = document.querySelector(".next-button");
-  const mapAreas = document.querySelectorAll("area");
-  const initialOverlay = document.querySelector(".initial-overlay");
+  const closeButton = document.querySelector(".close-button");
   const fullscreenView = document.querySelector(".fullscreen-view");
-  const closeFullscreenBtn = document.querySelector(".close-fullscreen");
   const fullscreenImageContainer = document.querySelector(
     ".fullscreen-image-container"
   );
+  const closeFullscreenButton = document.querySelector(".close-fullscreen");
 
-  // Create a div for map overlay (for dimming effect)
-  const mapOverlay = document.createElement("div");
-  mapOverlay.className = "map-overlay";
-  mapWrapper.appendChild(mapOverlay);
+  // Image paths for zones (external JSON or directly defined here)
+  const imageBaseURL = "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/";
 
-  // Variables
-  let allZones = []; // All zones (title + array of images)
-  let zoneHighlights = {}; // Stores SVG overlays
-  let autoCycleInterval = null; // For random highlight cycling
-  let userInteracted = false; // True after user clicks/taps
-  let lastClickedZone = null; // Track two-tap logic
-  let isFirstTap = true; // Two-tap logic for mobile
-  let isMobile = window.innerWidth <= 768;
-
-  // Current zone + index of the image within that zone
+  // State variables
+  let allZones = [];
   let currentZoneIndex = 0;
   let currentImageIndex = 0;
+  let autoCycleInterval = null;
+  let userInteracted = false;
+  let isFirstTap = true;
+  let lastClickedZone = null;
+  let isMobile = window.innerWidth <= 768;
+  let lastMapWidth = 0;
+  let lastMapHeight = 0;
+  let debugMode = false; // Set to true for debugging coordinate mapping
 
-  /**********************************************************
-   * 1) Multi-Image Arrays for Each Zone (Root-Level Files)
-   **********************************************************/
-  const zoneImageMap = {
-    // ========== NorthWest ==========
-    NorthWestAreaA: [
-      "north-west-area-a.jpg",
-      "north-west-area-a-2.jpg",
-      "north-west-area-a-3.jpg",
-    ],
-    NorthWestAreaB: [
-      "Northwest Calgary Distribution Map (3)-1.png",
-      "Northwest Calgary Distribution Map (3)-2.png",
-    ],
-    NorthWestAreaC: ["Northwest Calgary Distribution Map (3)-3.png"],
-
-    // ========== NorthEast ==========
-    NorthEastAreaA: [
-      "North East-1.png",
-      "North East-2.png",
-      "North East-3.png",
-    ],
-    NorthEastAreaB: ["North East-1.png", "North East-2.png"],
-    NorthEastAreaC: ["North East-3.png"],
-
-    // ========== Downtown ==========
-    DowntownAreaA: [
-      "Downtown Calgary Map (1)-1.png",
-      "Downtown Calgary Map (1)-2.png",
-    ],
-    DowntownAreaB: [
-      "Downtown Calgary Map (1)-1.png",
-      "Downtown Calgary Map (1)-2.png",
-    ],
-
-    // ========== SouthEast ==========
-    SouthEastAreaA: [
-      "South East Completed (2)-1.png",
-      "South East Completed (2)-2.png",
-    ],
-    SouthEastAreaB: [
-      "South East Completed (2)-1.png",
-      "South East Completed (2)-2.png",
-    ],
-
-    // ========== SouthWest ==========
-    SouthWestAreaA: ["Southwest Map (2)-1.png", "Southwest Map (2)-2.png"],
-    SouthWestAreaB: ["Southwest Map (2)-1.png", "Southwest Map (2)-2.png"],
-  };
-
-  // The base URL for root-level images in your GitHub repo
-  const imageBaseURL =
-    "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool@latest/images/";
+  // Create an overlay for debugging if in debug mode
+  let debugOverlay = null;
 
   /**********************************************************
    * 2) Initialize
    **********************************************************/
   function init() {
+    // Enable debug mode from URL parameter
+    if (window.location.search.includes("debug=true")) {
+      debugMode = true;
+      createDebugOverlay();
+    }
+
     // Build the zones array from <area> + zoneImageMap
     initializeZones();
 
     // Debug info
     console.log("CKMapTool initialized");
     console.log("Zones detected:", Object.keys(zoneImageMap).length);
-    console.log("imageBaseURL:", imageBaseURL);
+    console.log("Screen size:", window.innerWidth, "x", window.innerHeight);
+    console.log("Device pixel ratio:", window.devicePixelRatio);
+    console.log("Is mobile:", isMobile);
 
     // Once the map is loaded, create the polygon overlays
     if (mainMap.complete) {
       createAreaHighlights();
       updateAreaHighlights();
+      storeMapDimensions();
     } else {
       mainMap.onload = function () {
         console.log("Main map loaded successfully");
+        console.log(
+          "Natural size:",
+          mainMap.naturalWidth,
+          "x",
+          mainMap.naturalHeight
+        );
+        console.log(
+          "Displayed size:",
+          mainMap.offsetWidth,
+          "x",
+          mainMap.offsetHeight
+        );
         createAreaHighlights();
         updateAreaHighlights();
+        storeMapDimensions();
       };
 
       mainMap.onerror = function () {
@@ -117,18 +102,21 @@ document.addEventListener("DOMContentLoaded", function () {
       };
     }
 
-    // Two-tap mobile
+    // Setup touch and click events
     setupTouchEvents();
+    setupClickEvents();
 
     // Hide the "Tap a region to explore" after 5s
     setTimeout(() => {
-      initialOverlay.classList.add("hide");
+      if (initialOverlay) {
+        initialOverlay.classList.add("hide");
+      }
     }, 5000);
 
     // Start random highlight cycling
     startAutoCycle();
 
-    // Stop auto-cycling on click
+    // Stop auto-cycling on interaction
     document.addEventListener("click", () => {
       userInteracted = true;
       stopAutoCycle();
@@ -140,132 +128,319 @@ document.addEventListener("DOMContentLoaded", function () {
       isMobile = window.innerWidth <= 768;
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
+        const dimensionsChanged = checkMapDimensionChanges();
         updateAreaHighlights();
+
+        if (dimensionsChanged && debugMode) {
+          console.log("Map dimensions changed, updating debug info");
+          updateDebugOverlay();
+        }
       }, 250);
     });
 
-    setTimeout(() => {
-      updateAreaHighlights();
-    }, 500);
-
+    // Handle orientation changes more explicitly
     window.addEventListener("orientationchange", () => {
       setTimeout(() => {
+        console.log("Orientation changed, updating map");
+        const dimensionsChanged = checkMapDimensionChanges();
         updateAreaHighlights();
-      }, 200);
+
+        if (dimensionsChanged && debugMode) {
+          console.log("Map dimensions changed after orientation change");
+          updateDebugOverlay();
+        }
+      }, 300);
     });
   }
 
   /**********************************************************
-   * 3) Build Zones Array
+   * 3) Zone Initialization
    **********************************************************/
   function initializeZones() {
+    if (!mapAreas.length) {
+      console.error("No map areas found!");
+      return;
+    }
+
+    allZones = [];
+
+    // Process each area
     mapAreas.forEach((area) => {
       const title = area.getAttribute("title");
-      if (title && zoneImageMap[title]) {
-        // The zone has multiple images
-        allZones.push({
-          title: title,
-          imagePaths: zoneImageMap[title],
-        });
-      }
+
+      // Skip if no title or not in zoneImageMap
+      if (!title || !zoneImageMap[title]) return;
+
+      // Create zone object
+      const zone = {
+        title: title,
+        coords: area.getAttribute("coords").split(",").map(Number),
+        shape: area.getAttribute("shape"),
+        imagePaths: zoneImageMap[title],
+        element: area,
+      };
+
+      allZones.push(zone);
     });
+
+    console.log(`Processed ${allZones.length} active zones`);
   }
 
   /**********************************************************
-   * 4) Create SVG Overlays
+   * 4) Area Highlights Creation
    **********************************************************/
   function createAreaHighlights() {
-    if (!mainMap.complete) {
-      console.log("Main map not yet loaded, waiting...");
-      mainMap.onload = createAreaHighlights;
-      return;
+    // Create container for highlights if it doesn't exist
+    let highlightsContainer = document.querySelector(".highlights-container");
+
+    if (!highlightsContainer) {
+      highlightsContainer = document.createElement("div");
+      highlightsContainer.className = "highlights-container";
+      mapWrapper.appendChild(highlightsContainer);
+    } else {
+      // Clear existing highlights
+      highlightsContainer.innerHTML = "";
     }
 
-    console.log("Creating area highlights for", mapAreas.length, "areas");
+    // Create SVG container for the highlights
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "map-highlights");
+    svg.style.position = "absolute";
+    svg.style.top = "0";
+    svg.style.left = "0";
+    svg.style.width = "100%";
+    svg.style.height = "100%";
+    svg.style.pointerEvents = "none"; // Make sure it doesn't interfere with clicks
+    highlightsContainer.appendChild(svg);
 
-    // Debug check if mapAreas is accessible
-    if (mapAreas.length === 0) {
-      console.error(
-        "ERROR: No map areas found! Check that the <map> and <area> tags are correct."
-      );
-      console.log(
-        "Map element exists:",
-        !!document.querySelector('map[name="image-map"]')
-      );
-      return;
-    }
-
-    mapAreas.forEach((area, index) => {
-      if (area.getAttribute("shape") === "poly") {
-        const coords = area.getAttribute("coords").split(",");
-        const title = area.getAttribute("title");
-        console.log(
-          `Processing area ${index + 1}: ${title} with ${
-            coords.length / 2
-          } points`
+    // Process each zone
+    allZones.forEach((zone, index) => {
+      if (zone.shape === "poly") {
+        // Create polygon highlight
+        const polygon = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "polygon"
         );
-
-        const svgNS = "http://www.w3.org/2000/svg";
-        const svg = document.createElementNS(svgNS, "svg");
-        svg.setAttribute("class", "zone-highlight");
-        svg.setAttribute("data-zone", title);
-        Object.assign(svg.style, {
-          position: "absolute",
-          top: "0",
-          left: "0",
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none", // Make sure SVG doesn't block clicks
-        });
-
-        const polygon = document.createElementNS(svgNS, "polygon");
-
-        const scaleX = mainMap.width / mainMap.naturalWidth;
-        const scaleY = mainMap.height / mainMap.naturalHeight;
-
-        console.log(
-          `Map dimensions: ${mainMap.width}x${mainMap.height}, Scale: ${scaleX}x${scaleY}`
-        );
-
-        let points = "";
-        for (let i = 0; i < coords.length; i += 2) {
-          const x = parseFloat(coords[i]) * scaleX;
-          const y = parseFloat(coords[i + 1]) * scaleY;
-          points += `${x},${y} `;
-        }
-        polygon.setAttribute("points", points.trim());
-        polygon.setAttribute("fill", "#3498db");
-        polygon.setAttribute("fill-opacity", "0.3");
-        polygon.setAttribute("stroke", "#2980b9");
-        polygon.setAttribute("stroke-width", "2");
-
+        polygon.setAttribute("class", `zone-highlight zone-${index}`);
+        polygon.setAttribute("data-zone", zone.title);
         svg.appendChild(polygon);
-        mapWrapper.appendChild(svg);
-
-        zoneHighlights[title] = svg;
       }
     });
-
-    window.addEventListener("resize", updateAreaHighlights);
-
-    // Make sure every area has event listeners properly attached
-    console.log("Setting up event listeners for map areas");
-    setupMapAreaInteraction();
   }
 
   /**********************************************************
-   * Enhanced map area interaction setup
+   * 5) Map Area Interaction
    **********************************************************/
   function setupMapAreaInteraction() {
-    mapAreas.forEach((area, index) => {
-      const title = area.getAttribute("title");
-      console.log(`Setting up interactions for ${title}`);
+    // Direct interaction with map areas
+    allZones.forEach((zone) => {
+      zone.element.addEventListener("mouseenter", () => {
+        if (!isMobile) {
+          zoneLabel.textContent = formatZoneTitle(zone.title);
+          zoneLabel.style.opacity = "1";
+          highlightZone(zone.title);
+        }
+      });
 
-      // Make sure href="#" doesn't navigate
-      area.addEventListener("click", function (e) {
+      zone.element.addEventListener("mouseleave", () => {
+        if (!isMobile) {
+          zoneLabel.style.opacity = "0";
+          updateAreaHighlights(); // Reset highlights
+        }
+      });
+
+      zone.element.addEventListener("click", (e) => {
         e.preventDefault();
-        console.log("Area clicked:", title);
+        userInteracted = true;
+        stopAutoCycle();
 
+        // On desktop, open modal directly
+        if (!isMobile) {
+          openZoneModal(zone.title);
+        }
+        // On mobile, first tap highlights, second tap opens
+        else {
+          if (isFirstTap) {
+            handleFirstTap(zone.title);
+          } else if (zone.title === lastClickedZone) {
+            openZoneModal(zone.title);
+          } else {
+            resetTapState();
+            handleFirstTap(zone.title);
+          }
+        }
+      });
+    });
+  }
+
+  /**********************************************************
+   * 6) Area Highlight Updates
+   **********************************************************/
+  function updateAreaHighlights() {
+    if (!mainMap || !mainMap.complete) return;
+
+    // Get current map dimensions
+    const mapWidth = mainMap.offsetWidth;
+    const mapHeight = mainMap.offsetHeight;
+
+    // Original map dimensions (SVG viewBox or natural size)
+    const originalWidth = mainMap.naturalWidth;
+    const originalHeight = mainMap.naturalHeight;
+
+    if (
+      mapWidth === 0 ||
+      mapHeight === 0 ||
+      originalWidth === 0 ||
+      originalHeight === 0
+    ) {
+      console.warn("Cannot update highlights: Invalid dimensions", {
+        mapWidth,
+        mapHeight,
+        originalWidth,
+        originalHeight,
+      });
+      return;
+    }
+
+    // Calculate scale factors
+    const scaleX = mapWidth / originalWidth;
+    const scaleY = mapHeight / originalHeight;
+
+    if (debugMode) {
+      console.log("Updating area highlights with scale factors:", {
+        scaleX,
+        scaleY,
+        mapWidth,
+        mapHeight,
+        originalWidth,
+        originalHeight,
+      });
+    }
+
+    // Update each zone's polygon
+    allZones.forEach((zone, index) => {
+      if (zone.shape === "poly") {
+        const polygon = document.querySelector(`.zone-highlight.zone-${index}`);
+        if (!polygon) return;
+
+        // Scale coordinates
+        const scaledPoints = [];
+        for (let i = 0; i < zone.coords.length; i += 2) {
+          const x = zone.coords[i] * scaleX;
+          const y = zone.coords[i + 1] * scaleY;
+          scaledPoints.push(`${x},${y}`);
+        }
+
+        polygon.setAttribute("points", scaledPoints.join(" "));
+      }
+    });
+  }
+
+  /**********************************************************
+   * 7) Touch Events and Coordinate Handling
+   **********************************************************/
+  function setupTouchEvents() {
+    // Handle direct touch on the map image (bypassing <area> tags)
+    mainMap.addEventListener(
+      "touchstart",
+      function (e) {
+        // Prevent zooming but allow scrolling
+        if (e.touches.length > 1) {
+          return; // Allow multi-touch gestures to pass through
+        }
+      },
+      { passive: true }
+    );
+
+    // Track touch movement to distinguish between taps and scrolls
+    let touchStartX, touchStartY;
+    let touchMoved = false;
+    const touchThreshold = isMobile ? 15 : 10; // Higher threshold for mobile
+
+    mainMap.addEventListener(
+      "touchstart",
+      (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchMoved = false;
+      },
+      { passive: true }
+    );
+
+    mainMap.addEventListener(
+      "touchmove",
+      (e) => {
+        if (!touchStartX || !touchStartY) return;
+
+        const diffX = Math.abs(e.touches[0].clientX - touchStartX);
+        const diffY = Math.abs(e.touches[0].clientY - touchStartY);
+
+        if (diffX > touchThreshold || diffY > touchThreshold) {
+          touchMoved = true;
+        }
+      },
+      { passive: true }
+    );
+
+    mainMap.addEventListener("touchend", (e) => {
+      // Only process if it was a tap, not a scroll
+      if (touchMoved) return;
+
+      e.preventDefault(); // Prevent any default touch behavior like zooming
+
+      // Calculate touch coordinates relative to the map
+      const mapRect = mainMap.getBoundingClientRect();
+      const touch = e.changedTouches[0];
+
+      // Get relative position within the map
+      const relativeX = touch.clientX - mapRect.left;
+      const relativeY = touch.clientY - mapRect.top;
+
+      // Scale from displayed size to original coordinate system
+      const scaleX = mainMap.naturalWidth / mapRect.width;
+      const scaleY = mainMap.naturalHeight / mapRect.height;
+
+      // Calculate coordinates in the original coordinate system
+      const originalX = relativeX * scaleX;
+      const originalY = relativeY * scaleY;
+
+      if (debugMode) {
+        console.log(
+          `Touch at: display(${relativeX}, ${relativeY}), original(${originalX}, ${originalY})`
+        );
+        showDebugPoint(relativeX, relativeY);
+      }
+
+      // Find the area that was touched
+      let touchedArea = null;
+
+      // First try with the scaled coordinates for better mobile experience
+      for (const zone of allZones) {
+        if (zone.shape === "poly") {
+          if (isPointInPolygon(originalX, originalY, zone.coords)) {
+            touchedArea = zone.element;
+            break;
+          }
+        }
+      }
+
+      // If no match, try with a touch tolerance for better experience
+      if (!touchedArea) {
+        const tolerance = isMobile ? 15 : 10;
+        for (const zone of allZones) {
+          if (zone.shape === "poly") {
+            if (
+              isPointNearPolygon(originalX, originalY, zone.coords, tolerance)
+            ) {
+              touchedArea = zone.element;
+              break;
+            }
+          }
+        }
+      }
+
+      if (touchedArea) {
+        const title = touchedArea.getAttribute("title");
         userInteracted = true;
         stopAutoCycle();
 
@@ -277,155 +452,96 @@ document.addEventListener("DOMContentLoaded", function () {
           resetTapState();
           handleFirstTap(title);
         }
-      });
-
-      // On desktop hover
-      area.addEventListener("mouseover", function (e) {
-        console.log("Hover on:", title);
-        if (isMobile || lastClickedZone) return;
-        zoneLabel.textContent = formatZoneTitle(title);
-        zoneLabel.style.opacity = "1";
-        if (zoneHighlights[title]) {
-          zoneHighlights[title].style.opacity = "1";
-          zoneHighlights[title].style.transform = "scale(1.01)";
-        }
-        mapOverlay.style.opacity = "1";
-      });
-
-      area.addEventListener("mouseout", function () {
-        if (isMobile || lastClickedZone) return;
-        zoneLabel.style.opacity = "0";
-        if (zoneHighlights[title]) {
-          zoneHighlights[title].style.opacity = "0";
-          zoneHighlights[title].style.transform = "scale(1)";
-        }
-        mapOverlay.style.opacity = "0";
-      });
+      }
     });
+  }
 
-    // Directly add a click handler to the image map as well
-    mainMap.addEventListener("click", function (e) {
-      const rect = mainMap.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      console.log(`Map clicked at ${x},${y}`);
+  /**
+   * Setup click events for direct map interaction on desktop
+   */
+  function setupClickEvents() {
+    // Handle direct clicks on the map (bypassing <area> tags)
+    mainMap.addEventListener("click", (e) => {
+      // Skip on mobile - handled by touch events
+      if (isMobile) return;
 
-      // Find which area was clicked
-      for (let i = 0; i < mapAreas.length; i++) {
-        const area = mapAreas[i];
-        if (area.getAttribute("shape") === "poly") {
-          const coords = area.getAttribute("coords").split(",").map(Number);
-          if (isPointInPolygon(x, y, coords)) {
-            const title = area.getAttribute("title");
-            console.log("Found area:", title);
-            userInteracted = true;
-            stopAutoCycle();
+      // Calculate click coordinates
+      const mapRect = mainMap.getBoundingClientRect();
+      const relativeX = e.clientX - mapRect.left;
+      const relativeY = e.clientY - mapRect.top;
 
-            if (isFirstTap) {
-              handleFirstTap(title);
-            } else if (title === lastClickedZone) {
-              openZoneModal(title);
-            } else {
-              resetTapState();
-              handleFirstTap(title);
-            }
+      // Scale from displayed size to original coordinate system
+      const scaleX = mainMap.naturalWidth / mapRect.width;
+      const scaleY = mainMap.naturalHeight / mapRect.height;
+
+      // Calculate coordinates in the original coordinate system
+      const originalX = relativeX * scaleX;
+      const originalY = relativeY * scaleY;
+
+      if (debugMode) {
+        console.log(
+          `Click at: display(${relativeX}, ${relativeY}), original(${originalX}, ${originalY})`
+        );
+        showDebugPoint(relativeX, relativeY);
+      }
+
+      // Find the area that was clicked
+      let clickedArea = null;
+
+      for (const zone of allZones) {
+        if (zone.shape === "poly") {
+          if (isPointInPolygon(originalX, originalY, zone.coords)) {
+            clickedArea = zone.element;
             break;
           }
         }
       }
-    });
-  }
 
-  /**********************************************************
-   * 5) Update Overlays on Resize
-   **********************************************************/
-  function updateAreaHighlights() {
-    const mapWidth =
-      mainMap.width || mainMap.clientWidth || mainMap.offsetWidth;
-    const mapHeight =
-      mainMap.height || mainMap.clientHeight || mainMap.offsetHeight;
-    const naturalWidth = mainMap.naturalWidth;
-    const naturalHeight = mainMap.naturalHeight;
-
-    const scaleX = mapWidth / naturalWidth;
-    const scaleY = mapHeight / naturalHeight;
-
-    mapAreas.forEach((area) => {
-      if (area.getAttribute("shape") === "poly") {
-        const coords = area.getAttribute("coords").split(",");
-        const title = area.getAttribute("title");
-        const svg = zoneHighlights[title];
-        if (svg) {
-          const polygon = svg.querySelector("polygon");
-
-          let points = "";
-          for (let i = 0; i < coords.length; i += 2) {
-            const x = parseFloat(coords[i]) * scaleX;
-            const y = parseFloat(coords[i + 1]) * scaleY;
-            points += `${x},${y} `;
-          }
-          polygon.setAttribute("points", points.trim());
-        }
-
-        // Also update <area> coords for accurate click detection
-        let newCoords = "";
-        for (let i = 0; i < coords.length; i++) {
-          const val = parseFloat(coords[i]);
-          const newVal = i % 2 === 0 ? val * scaleX : val * scaleY;
-          newCoords += Math.round(newVal) + ",";
-        }
-        newCoords = newCoords.slice(0, -1);
-        area.setAttribute("coords", newCoords);
+      if (clickedArea) {
+        const title = clickedArea.getAttribute("title");
+        userInteracted = true;
+        stopAutoCycle();
+        openZoneModal(title);
       }
     });
   }
 
   /**********************************************************
-   * 6) Two-Tap Logic for Mobile
+   * 8) Enhanced Coordinate Mapping
    **********************************************************/
-  function setupTouchEvents() {
-    const isTouchDevice =
-      "ontouchstart" in window || navigator.maxTouchPoints > 0;
-    if (!isTouchDevice) return;
 
-    mapWrapper.addEventListener(
-      "touchstart",
-      function (e) {
-        e.preventDefault();
-        const touch = e.touches[0];
-        const rect = mapWrapper.getBoundingClientRect();
-        const relativeX = touch.clientX - rect.left;
-        const relativeY = touch.clientY - rect.top;
-
-        let touchedArea = null;
-        mapAreas.forEach((area) => {
-          if (area.getAttribute("shape") === "poly") {
-            const coords = area.getAttribute("coords").split(",").map(Number);
-            if (isPointInPolygon(relativeX, relativeY, coords)) {
-              touchedArea = area;
-            }
-          }
-        });
-
-        if (touchedArea) {
-          const title = touchedArea.getAttribute("title");
-          userInteracted = true;
-          stopAutoCycle();
-
-          if (isFirstTap) {
-            handleFirstTap(title);
-          } else if (title === lastClickedZone) {
-            openZoneModal(title);
-          } else {
-            resetTapState();
-            handleFirstTap(title);
-          }
-        }
-      },
-      { passive: false }
-    );
+  /**
+   * Store current map dimensions to detect changes
+   */
+  function storeMapDimensions() {
+    lastMapWidth = mainMap.offsetWidth;
+    lastMapHeight = mainMap.offsetHeight;
   }
 
+  /**
+   * Check if map dimensions have changed
+   */
+  function checkMapDimensionChanges() {
+    const currentWidth = mainMap.offsetWidth;
+    const currentHeight = mainMap.offsetHeight;
+
+    if (currentWidth !== lastMapWidth || currentHeight !== lastMapHeight) {
+      console.log(
+        "Map dimensions changed:",
+        `${lastMapWidth}x${lastMapHeight} -> ${currentWidth}x${currentHeight}`
+      );
+
+      lastMapWidth = currentWidth;
+      lastMapHeight = currentHeight;
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Enhanced point-in-polygon detection that works on all screen sizes
+   */
   function isPointInPolygon(x, y, poly) {
     let inside = false;
     for (let i = 0, j = poly.length - 2; i < poly.length; j = i, i += 2) {
@@ -433,15 +549,159 @@ document.addEventListener("DOMContentLoaded", function () {
         yi = poly[i + 1];
       const xj = poly[j],
         yj = poly[j + 1];
+
       const intersect =
         yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+
       if (intersect) inside = !inside;
     }
     return inside;
   }
 
+  /**
+   * Check if a point is near a polygon (within tolerance)
+   * This helps with touch accuracy on mobile devices
+   */
+  function isPointNearPolygon(x, y, poly, tolerance) {
+    // First check if point is inside the polygon
+    if (isPointInPolygon(x, y, poly)) {
+      return true;
+    }
+
+    // If not inside, check if it's near any edge
+    for (let i = 0, j = poly.length - 2; i < poly.length; j = i, i += 2) {
+      const xi = poly[i],
+        yi = poly[i + 1];
+      const xj = poly[j],
+        yj = poly[j + 1];
+
+      // Calculate distance from point to line segment
+      const dist = distanceToSegment(x, y, xi, yi, xj, yj);
+      if (dist <= tolerance) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Calculate distance from point to line segment
+   */
+  function distanceToSegment(px, py, x1, y1, x2, y2) {
+    const A = px - x1;
+    const B = py - y1;
+    const C = x2 - x1;
+    const D = y2 - y1;
+
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = -1;
+
+    if (lenSq !== 0) {
+      param = dot / lenSq;
+    }
+
+    let xx, yy;
+
+    if (param < 0) {
+      xx = x1;
+      yy = y1;
+    } else if (param > 1) {
+      xx = x2;
+      yy = y2;
+    } else {
+      xx = x1 + param * C;
+      yy = y1 + param * D;
+    }
+
+    const dx = px - xx;
+    const dy = py - yy;
+
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
   /**********************************************************
-   * 7) Auto Highlight Cycle
+   * 9) Debug Functions
+   **********************************************************/
+
+  /**
+   * Create debug overlay for visualizing coordinates
+   */
+  function createDebugOverlay() {
+    debugOverlay = document.createElement("div");
+    debugOverlay.style.position = "absolute";
+    debugOverlay.style.top = "0";
+    debugOverlay.style.left = "0";
+    debugOverlay.style.width = "100%";
+    debugOverlay.style.height = "100%";
+    debugOverlay.style.pointerEvents = "none";
+    debugOverlay.style.zIndex = "1000";
+
+    const infoPanel = document.createElement("div");
+    infoPanel.style.position = "absolute";
+    infoPanel.style.top = "10px";
+    infoPanel.style.left = "10px";
+    infoPanel.style.padding = "5px";
+    infoPanel.style.backgroundColor = "rgba(0,0,0,0.7)";
+    infoPanel.style.color = "white";
+    infoPanel.style.fontSize = "12px";
+    infoPanel.style.fontFamily = "monospace";
+    infoPanel.style.borderRadius = "3px";
+    infoPanel.className = "debug-info";
+
+    debugOverlay.appendChild(infoPanel);
+    mapWrapper.appendChild(debugOverlay);
+
+    updateDebugOverlay();
+  }
+
+  /**
+   * Update debug overlay information
+   */
+  function updateDebugOverlay() {
+    if (!debugOverlay) return;
+
+    const infoPanel = debugOverlay.querySelector(".debug-info");
+    if (!infoPanel) return;
+
+    infoPanel.innerHTML = `
+      Map size: ${mainMap.offsetWidth} x ${mainMap.offsetHeight}<br>
+      Natural: ${mainMap.naturalWidth} x ${mainMap.naturalHeight}<br>
+      Scale: ${(mainMap.offsetWidth / mainMap.naturalWidth).toFixed(2)}x, 
+             ${(mainMap.offsetHeight / mainMap.naturalHeight).toFixed(2)}y<br>
+      Device: ${window.innerWidth} x ${window.innerHeight} (${
+      window.devicePixelRatio
+    }x)
+    `;
+  }
+
+  /**
+   * Show a debug point where user clicked/touched
+   */
+  function showDebugPoint(x, y) {
+    if (!debugOverlay) return;
+
+    const point = document.createElement("div");
+    point.style.position = "absolute";
+    point.style.width = "10px";
+    point.style.height = "10px";
+    point.style.borderRadius = "50%";
+    point.style.backgroundColor = "red";
+    point.style.top = y - 5 + "px";
+    point.style.left = x - 5 + "px";
+    point.style.pointerEvents = "none";
+
+    debugOverlay.appendChild(point);
+
+    // Remove after 2 seconds
+    setTimeout(() => {
+      point.remove();
+    }, 2000);
+  }
+
+  /**********************************************************
+   * 10) Auto Highlight Cycle
    **********************************************************/
   function startAutoCycle() {
     if (!userInteracted) {
@@ -449,16 +709,21 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!allZones.length) return;
         const randomIndex = Math.floor(Math.random() * allZones.length);
         const randomZone = allZones[randomIndex];
-        if (randomZone && zoneHighlights[randomZone.title]) {
-          const hl = zoneHighlights[randomZone.title];
-          hl.classList.add("auto-highlight");
-          setTimeout(() => {
-            hl.classList.remove("auto-highlight");
-          }, 800);
-        }
-      }, 2000);
+
+        // Clear current highlights
+        document.querySelectorAll(".zone-highlight").forEach((highlight) => {
+          highlight.classList.remove("active");
+        });
+
+        // Highlight random zone
+        const highlight = document.querySelector(
+          `.zone-highlight.zone-${randomIndex}`
+        );
+        if (highlight) highlight.classList.add("active");
+      }, 3000);
     }
   }
+
   function stopAutoCycle() {
     if (autoCycleInterval) {
       clearInterval(autoCycleInterval);
@@ -467,68 +732,57 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**********************************************************
-   * 8) Two-Tap: First Tap => highlight, second => open
+   * 11) Mobile First Tap Handling
    **********************************************************/
   function handleFirstTap(title) {
-    zoneLabel.textContent = formatZoneTitle(title);
-    zoneLabel.classList.add("active");
+    // Highlight the tapped zone
+    highlightZone(title);
 
-    if (zoneHighlights[title]) {
-      zoneHighlights[title].style.opacity = "1";
-      zoneHighlights[title].style.transform = "scale(1.01)";
-    }
+    // Show zone name above finger
+    zoneLabel.textContent = formatZoneTitle(title);
+    zoneLabel.style.opacity = "1";
+
+    // Store this zone as last clicked
     lastClickedZone = title;
     isFirstTap = false;
 
-    setTimeout(() => {
-      if (lastClickedZone === title) {
-        resetTapState();
-      }
-    }, 3000);
+    // Reset state after a delay
+    setTimeout(resetTapState, 5000);
   }
+
   function resetTapState() {
-    zoneLabel.classList.remove("active");
-    Object.values(zoneHighlights).forEach((hl) => {
-      hl.style.opacity = "0";
-      hl.style.transform = "scale(1)";
-    });
-    lastClickedZone = null;
     isFirstTap = true;
-    mapOverlay.style.opacity = "0";
+    lastClickedZone = null;
+    zoneLabel.style.opacity = "0";
+    updateAreaHighlights(); // Reset highlights
   }
 
   /**********************************************************
-   * 9) Opening the Modal (Multi-Image for that zone)
+   * 12) Modal Display and Control
    **********************************************************/
   function openZoneModal(title) {
-    console.log("Opening zone modal for:", title);
-    const zoneIndex = findZoneIndexByTitle(title);
+    resetTapState();
 
-    if (zoneIndex === -1) {
+    // Find zone index
+    currentZoneIndex = findZoneIndexByTitle(title);
+    if (currentZoneIndex === -1) {
       console.error("Zone not found:", title);
-      console.log(
-        "Available zones:",
-        allZones.map((z) => z.title)
-      );
       return;
     }
 
-    currentZoneIndex = zoneIndex;
+    // Reset image index
     currentImageIndex = 0;
 
-    zoneModal.classList.add("active");
-    console.log("Showing images for zone:", allZones[currentZoneIndex].title);
-    console.log(
-      "Number of images:",
-      allZones[currentZoneIndex].imagePaths.length
-    );
+    // Show the current image
     showCurrentImage();
-    resetTapState();
+
+    // Show the modal
+    zoneModal.classList.add("active");
+
+    // Setup navigation buttons
+    setupModalNavigation();
   }
 
-  /**********************************************************
-   * 10) Display the Current Image in the Carousel
-   **********************************************************/
   function showCurrentImage() {
     if (!allZones.length) return;
     const zoneObj = allZones[currentZoneIndex];
@@ -547,7 +801,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Build new image
     const img = document.createElement("img");
     img.className = "slider-image fade-transition";
-    const imgSrc = imageBaseURL + encodeURIComponent(images[currentImageIndex]);
+    const imgSrc = images[currentImageIndex];
     img.src = imgSrc;
     img.alt = formatZoneTitle(zoneObj.title);
 
@@ -579,10 +833,45 @@ document.addEventListener("DOMContentLoaded", function () {
 
     sliderContainer.appendChild(img);
     modalTitle.textContent = formatZoneTitle(zoneObj.title);
+
+    // Update navigation buttons visibility
+    if (images && images.length > 1) {
+      prevButton.style.display = "block";
+      nextButton.style.display = "block";
+    } else {
+      prevButton.style.display = "none";
+      nextButton.style.display = "none";
+    }
+  }
+
+  function setupModalNavigation() {
+    // Setup navigation buttons
+    prevButton.onclick = prevImage;
+    nextButton.onclick = nextImage;
+    closeButton.onclick = closeModal;
+
+    // Setup keyboard navigation
+    document.addEventListener("keydown", handleModalKeydown);
+  }
+
+  function handleModalKeydown(e) {
+    if (zoneModal.classList.contains("active")) {
+      if (e.key === "ArrowLeft") {
+        prevImage();
+      } else if (e.key === "ArrowRight") {
+        nextImage();
+      } else if (e.key === "Escape") {
+        closeModal();
+      }
+    } else if (fullscreenView.classList.contains("active")) {
+      if (e.key === "Escape") {
+        closeFullscreen();
+      }
+    }
   }
 
   /**********************************************************
-   * 11) Next/Prev image in the same zone
+   * 13) Next/Prev image in the same zone
    **********************************************************/
   function nextImage() {
     if (!allZones.length) return;
@@ -593,6 +882,7 @@ document.addEventListener("DOMContentLoaded", function () {
     currentImageIndex = (currentImageIndex + 1) % images.length;
     showCurrentImage();
   }
+
   function prevImage() {
     if (!allZones.length) return;
     const zoneObj = allZones[currentZoneIndex];
@@ -604,41 +894,64 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**********************************************************
-   * 12) Close Modal
+   * 14) Modal Close
    **********************************************************/
   function closeModal() {
     zoneModal.classList.remove("active");
-    resetTapState();
+    // Remove keyboard event listener
+    document.removeEventListener("keydown", handleModalKeydown);
   }
-  // Close if click outside content
-  zoneModal.addEventListener("click", (e) => {
-    if (e.target === zoneModal) {
-      closeModal();
-    }
-  });
 
   /**********************************************************
-   * 13) Fullscreen
+   * 15) Fullscreen
    **********************************************************/
   function showFullscreen(src, title) {
     fullscreenImageContainer.innerHTML = "";
+
+    // Show loading indicator
+    const loadingDiv = document.createElement("div");
+    loadingDiv.style.color = "white";
+    loadingDiv.style.textAlign = "center";
+    loadingDiv.style.padding = "20px";
+    loadingDiv.textContent = "Loading full resolution image...";
+    fullscreenImageContainer.appendChild(loadingDiv);
+
+    // Create and preload image
     const fsImg = document.createElement("img");
+
+    fsImg.onload = function () {
+      loadingDiv.remove();
+      fullscreenImageContainer.appendChild(fsImg);
+    };
+
+    fsImg.onerror = function () {
+      loadingDiv.textContent = "Error loading image";
+      loadingDiv.style.color = "red";
+    };
+
     fsImg.src = src;
     fsImg.alt = formatZoneTitle(title);
-    fullscreenImageContainer.appendChild(fsImg);
+
+    // Show fullscreen view
     fullscreenView.classList.add("active");
+
+    // Setup close button
+    closeFullscreenButton.onclick = closeFullscreen;
+
+    // Close when clicking background
+    fullscreenView.onclick = function (e) {
+      if (e.target === fullscreenView) {
+        closeFullscreen();
+      }
+    };
   }
+
   function closeFullscreen() {
     fullscreenView.classList.remove("active");
   }
-  fullscreenView.addEventListener("click", (e) => {
-    if (e.target === fullscreenView) {
-      closeFullscreen();
-    }
-  });
 
   /**********************************************************
-   * 14) Format Title
+   * 16) Helper Functions
    **********************************************************/
   function formatZoneTitle(title) {
     return title
@@ -648,65 +961,29 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function findZoneIndexByTitle(title) {
-    return allZones.findIndex((z) => z.title === title);
+    return allZones.findIndex((zone) => zone.title === title);
   }
 
-  /**********************************************************
-   * 15) Keyboard Nav
-   **********************************************************/
-  document.addEventListener("keydown", function (e) {
-    if (fullscreenView.classList.contains("active")) {
-      if (e.key === "Escape") closeFullscreen();
-    } else if (zoneModal.classList.contains("active")) {
-      if (e.key === "Escape") closeModal();
-      if (e.key === "ArrowLeft") prevImage();
-      if (e.key === "ArrowRight") nextImage();
-    }
-  });
-
-  /**********************************************************
-   * 16) Hook Up Buttons
-   **********************************************************/
-  prevButton.addEventListener("click", prevImage);
-  nextButton.addEventListener("click", nextImage);
-  closeButton.addEventListener("click", closeModal);
-  closeFullscreenBtn.addEventListener("click", closeFullscreen);
-
-  /**********************************************************
-   * 17) Desktop Hover Effects
-   **********************************************************/
-  mapAreas.forEach((area) => {
-    // On desktop hover
-    area.addEventListener("mouseover", function () {
-      if (isMobile || lastClickedZone) return;
-      const title = this.getAttribute("title");
-      zoneLabel.textContent = formatZoneTitle(title);
-      zoneLabel.style.opacity = "1";
-      if (zoneHighlights[title]) {
-        zoneHighlights[title].style.opacity = "1";
-        zoneHighlights[title].style.transform = "scale(1.01)";
-      }
-      mapOverlay.style.opacity = "1";
+  function highlightZone(title) {
+    // Clear all highlights first
+    document.querySelectorAll(".zone-highlight").forEach((highlight) => {
+      highlight.classList.remove("active");
     });
-    area.addEventListener("mouseout", function () {
-      if (isMobile || lastClickedZone) return;
-      zoneLabel.style.opacity = "0";
-      const title = this.getAttribute("title");
-      if (zoneHighlights[title]) {
-        zoneHighlights[title].style.opacity = "0";
-        zoneHighlights[title].style.transform = "scale(1)";
-      }
-      mapOverlay.style.opacity = "0";
-    });
-    area.addEventListener("click", function () {
-      userInteracted = true;
-      stopAutoCycle();
-    });
-  });
 
-  /**********************************************************
-   * 18) Helper function to precheck image existence
-   **********************************************************/
+    // Find the zone index
+    const zoneIndex = findZoneIndexByTitle(title);
+    if (zoneIndex === -1) return;
+
+    // Highlight this zone
+    const highlight = document.querySelector(
+      `.zone-highlight.zone-${zoneIndex}`
+    );
+    if (highlight) highlight.classList.add("active");
+  }
+
+  /**
+   * Check if an image exists at the given URL
+   */
   function checkImageExists(url) {
     return new Promise((resolve) => {
       const img = new Image();
@@ -716,6 +993,10 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Initialize the entire script
+  // Initialize the map when DOM is ready
   init();
+  setupMapAreaInteraction();
+
+  // Make map initialized flag global to prevent duplicate initialization
+  window.mapInitialized = true;
 });
