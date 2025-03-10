@@ -205,381 +205,6 @@
   defer
 ></script>
 
-<!-- Add responsive image map handling for mobile devices - improved scaling -->
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    // Get the map image and all area elements
-    const mapImage = document.querySelector(".main-map");
-    const areas = document.querySelectorAll("area");
-
-    // For debugging touch points (set to true to see touch markers)
-    const SHOW_TOUCH_POINTS = false;
-
-    // Store original map dimensions for accurate scaling
-    let originalWidth, originalHeight;
-
-    // Store original coordinates for each area
-    areas.forEach((area) => {
-      // Save original coords as a data attribute
-      area.setAttribute("data-original-coords", area.getAttribute("coords"));
-    });
-
-    // Enhanced coordinate scaling function with aspect ratio preservation
-    function scaleCoordinates() {
-      if (!mapImage) return;
-
-      // Get the current dimensions of the map image
-      const currentWidth = mapImage.clientWidth;
-      const currentHeight = mapImage.clientHeight;
-
-      // Get the natural dimensions of the image (only once)
-      if (!originalWidth || !originalHeight) {
-        originalWidth = mapImage.naturalWidth || 800;
-        originalHeight = mapImage.naturalHeight || 1200;
-        console.log(
-          `Original map dimensions: ${originalWidth}x${originalHeight}`
-        );
-      }
-
-      // Calculate scaling factors
-      const widthFactor = currentWidth / originalWidth;
-      const heightFactor = currentHeight / originalHeight;
-
-      console.log(
-        `Map scaled: ${widthFactor.toFixed(4)}x width, ${heightFactor.toFixed(
-          4
-        )}x height`
-      );
-
-      // Fix for mobile devices - additional adjustment for better vertical accuracy on tall screens
-      const isMobile = window.innerWidth < 768;
-      const mobileHeightAdjustment = isMobile ? 1.0 : 1.0; // Adjust this value if needed
-
-      // Apply scaling to each area with special handling for mobile
-      areas.forEach((area) => {
-        const originalCoords = area.getAttribute("data-original-coords");
-
-        // Skip if we don't have original coordinates
-        if (!originalCoords) return;
-
-        // Split coordinates into array of numbers
-        const coords = originalCoords.split(",").map(Number);
-
-        // Scale each coordinate with precise math
-        const scaledCoords = coords.map((coord, index) => {
-          // Even indices (0, 2, 4...) are X coordinates, scale by width
-          // Odd indices (1, 3, 5...) are Y coordinates, scale by height
-          if (index % 2 === 0) {
-            return Math.round(coord * widthFactor);
-          } else {
-            return Math.round(coord * heightFactor * mobileHeightAdjustment);
-          }
-        });
-
-        // Set the new scaled coordinates
-        area.setAttribute("coords", scaledCoords.join(","));
-      });
-
-      // Add touch indicator if enabled
-      if (SHOW_TOUCH_POINTS) {
-        setupTouchDebugging();
-      }
-    }
-
-    // Function to display touch points for debugging
-    function setupTouchDebugging() {
-      const mapWrapper = document.querySelector(".map-wrapper");
-      if (!mapWrapper) return;
-
-      // Create or get touch indicator
-      let touchIndicator = document.getElementById("touch-indicator");
-      if (!touchIndicator) {
-        touchIndicator = document.createElement("div");
-        touchIndicator.id = "touch-indicator";
-        touchIndicator.style.position = "absolute";
-        touchIndicator.style.width = "20px";
-        touchIndicator.style.height = "20px";
-        touchIndicator.style.borderRadius = "50%";
-        touchIndicator.style.backgroundColor = "rgba(255, 0, 0, 0.5)";
-        touchIndicator.style.transform = "translate(-50%, -50%)";
-        touchIndicator.style.pointerEvents = "none";
-        touchIndicator.style.zIndex = "1000";
-        mapWrapper.appendChild(touchIndicator);
-      }
-
-      // Show touch indicator where touches occur
-      mapImage.addEventListener("touchstart", function (e) {
-        e.preventDefault(); // Prevent double-tap zoom
-        const touch = e.touches[0];
-        const rect = mapImage.getBoundingClientRect();
-        const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
-
-        touchIndicator.style.left = x + "px";
-        touchIndicator.style.top = y + "px";
-        touchIndicator.style.display = "block";
-
-        console.log(`Touch at: ${x}, ${y}`);
-      });
-    }
-
-    // Initial scaling
-    if (mapImage) {
-      if (mapImage.complete) {
-        // Use requestAnimationFrame for more accurate timing
-        requestAnimationFrame(scaleCoordinates);
-      } else {
-        mapImage.onload = function () {
-          requestAnimationFrame(scaleCoordinates);
-        };
-      }
-    }
-
-    // Handle window resize with debounce
-    let resizeTimer;
-    window.addEventListener("resize", function () {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(function () {
-        requestAnimationFrame(scaleCoordinates);
-      }, 100);
-    });
-
-    // Handle orientation change
-    window.addEventListener("orientationchange", function () {
-      // Wait for the orientation change to finish
-      setTimeout(function () {
-        requestAnimationFrame(scaleCoordinates);
-      }, 300);
-    });
-  });
-</script>
-
-<!-- Enhance carousel with swipe support and better mobile styling -->
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    // Add improved mobile styling
-    const style = document.createElement("style");
-    style.textContent = `
-      /* Mobile-optimized carousel */
-      @media (max-width: 767px) {
-        .modal-content {
-          width: 95%;
-          max-width: 95%;
-          max-height: 80vh;
-        }
-        
-        .modal-title {
-          font-size: 18px;
-          padding: 10px;
-        }
-        
-        .slider-container {
-          min-height: 250px;
-        }
-        
-        .prev-button, .next-button {
-          width: 50px;
-          height: 50px;
-          font-size: 24px;
-          background: rgba(0, 0, 0, 0.7);
-          color: white;
-          border: none;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 5px;
-        }
-        
-        /* Swipe hint animation */
-        .swipe-hint {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background-color: rgba(0, 0, 0, 0.6);
-          color: white;
-          padding: 10px 15px;
-          border-radius: 20px;
-          font-size: 14px;
-          opacity: 0;
-          transition: opacity 0.3s;
-          pointer-events: none;
-          z-index: 10;
-        }
-        
-        .swipe-hint.show {
-          opacity: 1;
-          animation: fadeInOut 2s ease-in-out;
-        }
-        
-        @keyframes fadeInOut {
-          0% { opacity: 0; }
-          20% { opacity: 1; }
-          80% { opacity: 1; }
-          100% { opacity: 0; }
-        }
-      }
-      
-      /* Carousel transitions */
-      .slider-fade {
-        animation: fadeIn 0.3s ease;
-      }
-      
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-    `;
-    document.head.appendChild(style);
-
-    // Add swipe functionality to carousel
-    function setupSwipeNavigation() {
-      const zoneModal = document.querySelector(".zone-modal");
-      if (!zoneModal) return;
-
-      // Create swipe hint element
-      const swipeHint = document.createElement("div");
-      swipeHint.className = "swipe-hint";
-      swipeHint.textContent = "Swipe to view more";
-
-      // Touch tracking variables
-      let startX, startY, endX, endY;
-      let minSwipeDistance = 50; // Minimum distance to trigger swipe
-
-      // Show the swipe hint when a carousel with multiple images opens
-      function showSwipeHint() {
-        const sliderContainer = document.querySelector(".slider-container");
-        if (!sliderContainer) return;
-
-        const zoneTitle = sliderContainer.dataset.zoneTitle;
-        const images = zoneImageMap[zoneTitle] || [];
-
-        // Only show hint if there are multiple images
-        if (images.length > 1) {
-          sliderContainer.appendChild(swipeHint);
-          swipeHint.classList.add("show");
-
-          // Remove hint after animation
-          setTimeout(() => {
-            swipeHint.classList.remove("show");
-          }, 2000);
-        }
-      }
-
-      // Swipe navigation handler
-      function handleSwipe(direction) {
-        const sliderContainer = document.querySelector(".slider-container");
-        if (!sliderContainer) return;
-
-        const zoneTitle = sliderContainer.dataset.zoneTitle;
-        let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
-        const images = zoneImageMap[zoneTitle] || [];
-
-        if (images.length <= 1) return;
-
-        // Determine next index based on swipe direction
-        if (direction === "left") {
-          currentIndex = (currentIndex + 1) % images.length;
-        } else if (direction === "right") {
-          currentIndex = (currentIndex - 1 + images.length) % images.length;
-        }
-
-        sliderContainer.dataset.currentIndex = currentIndex.toString();
-
-        // Update image with animation
-        sliderContainer.innerHTML =
-          '<div style="text-align: center; padding: 20px;">Loading image...</div>';
-
-        const img = new Image();
-        img.src = images[currentIndex];
-        img.alt = formatZoneTitle(zoneTitle);
-        img.className = "slider-fade";
-
-        img.onload = function () {
-          sliderContainer.innerHTML = "";
-          sliderContainer.appendChild(img);
-
-          // Make image clickable for fullscreen
-          img.style.cursor = "zoom-in";
-          img.addEventListener("click", function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const fullscreenView = document.querySelector(".fullscreen-view");
-            const fullscreenContainer = document.querySelector(
-              ".fullscreen-image-container"
-            );
-
-            fullscreenContainer.innerHTML = "";
-            fullscreenContainer.appendChild(img.cloneNode());
-            fullscreenView.style.display = "flex";
-          });
-        };
-
-        img.onerror = function () {
-          sliderContainer.innerHTML =
-            '<div style="text-align: center; padding: 20px;">Failed to load image</div>';
-        };
-      }
-
-      // Register touch event handlers on modal
-      zoneModal.addEventListener(
-        "touchstart",
-        function (e) {
-          startX = e.touches[0].clientX;
-          startY = e.touches[0].clientY;
-        },
-        { passive: true }
-      );
-
-      zoneModal.addEventListener(
-        "touchend",
-        function (e) {
-          if (!startX) return;
-
-          endX = e.changedTouches[0].clientX;
-          endY = e.changedTouches[0].clientY;
-
-          // Calculate distance and direction
-          const diffX = endX - startX;
-          const diffY = endY - startY;
-
-          // Only trigger if horizontal swipe is greater than vertical and meets minimum distance
-          if (
-            Math.abs(diffX) > Math.abs(diffY) &&
-            Math.abs(diffX) > minSwipeDistance
-          ) {
-            const direction = diffX > 0 ? "right" : "left";
-            handleSwipe(direction);
-          }
-
-          // Reset values
-          startX = startY = endX = endY = null;
-        },
-        { passive: true }
-      );
-
-      // Show hint when modal opens
-      const observer = new MutationObserver(function (mutations) {
-        mutations.forEach(function (mutation) {
-          if (
-            mutation.attributeName === "class" &&
-            zoneModal.classList.contains("active")
-          ) {
-            setTimeout(showSwipeHint, 500);
-          }
-        });
-      });
-
-      observer.observe(zoneModal, { attributes: true });
-    }
-
-    // Initialize swipe navigation
-    setupSwipeNavigation();
-  });
-</script>
-
 <!-- Fallback script to ensure functionality -->
 <script>
   document.addEventListener("DOMContentLoaded", function () {
@@ -587,6 +212,8 @@
     const areas = document.querySelectorAll("area");
     const zoneModal = document.querySelector(".zone-modal");
     const closeButton = document.querySelector(".close-button");
+    const mapImage = document.querySelector(".main-map");
+    const mapWrapper = document.querySelector(".map-wrapper");
 
     // Define image paths with exact filenames from the repository
     const zoneImageMap = {
@@ -648,93 +275,345 @@
         .trim();
     }
 
-    // Basic click handlers for map areas
+    // Store area coordinates for direct click detection
+    const areaCoordinates = [];
+
+    // Parse coordinates from area elements
+    function parseCoordinates() {
+      areaCoordinates.length = 0; // Clear existing coordinates
+
+      areas.forEach((area) => {
+        const coords = area.getAttribute("coords").split(",").map(Number);
+        const shape = area.getAttribute("shape");
+        const title = area.getAttribute("title");
+
+        if (shape === "poly") {
+          // Create an array of points
+          const points = [];
+          for (let i = 0; i < coords.length; i += 2) {
+            points.push({ x: coords[i], y: coords[i + 1] });
+          }
+          areaCoordinates.push({ shape, points, title });
+        } else if (shape === "rect") {
+          areaCoordinates.push({
+            shape,
+            points: [
+              { x: coords[0], y: coords[1] }, // top-left
+              { x: coords[2], y: coords[3] }, // bottom-right
+            ],
+            title,
+          });
+        } else if (shape === "circle") {
+          areaCoordinates.push({
+            shape,
+            points: [
+              { x: coords[0], y: coords[1] }, // center
+              { radius: coords[2] }, // radius
+            ],
+            title,
+          });
+        }
+      });
+
+      console.log("Parsed coordinates:", areaCoordinates);
+    }
+
+    // Calculate scale ratio for the image
+    function getImageScaleRatio() {
+      // Get the original dimensions
+      const naturalWidth = mapImage.naturalWidth;
+      const naturalHeight = mapImage.naturalHeight;
+
+      // Get current dimensions
+      const currentWidth = mapImage.offsetWidth;
+      const currentHeight = mapImage.offsetHeight;
+
+      const scaleX = currentWidth / naturalWidth;
+      const scaleY = currentHeight / naturalHeight;
+
+      console.log(`Scale ratio: ${scaleX.toFixed(2)}x, ${scaleY.toFixed(2)}y`);
+
+      return { scaleX, scaleY };
+    }
+
+    // Function to check if a point is inside a polygon
+    function isPointInPoly(point, poly) {
+      const { scaleX, scaleY } = getImageScaleRatio();
+      let inside = false;
+
+      // Scale the point according to the image scale
+      const scaledPoint = {
+        x: point.x / scaleX,
+        y: point.y / scaleY,
+      };
+
+      // Ray casting algorithm
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const xi = poly[i].x,
+          yi = poly[i].y;
+        const xj = poly[j].x,
+          yj = poly[j].y;
+
+        const intersect =
+          yi > scaledPoint.y !== yj > scaledPoint.y &&
+          scaledPoint.x < ((xj - xi) * (scaledPoint.y - yi)) / (yj - yi) + xi;
+
+        if (intersect) inside = !inside;
+      }
+
+      return inside;
+    }
+
+    // Function to check if a point is in a circle
+    function isPointInCircle(point, center, radius) {
+      const { scaleX, scaleY } = getImageScaleRatio();
+
+      // Scale the point and radius
+      const scaledPoint = {
+        x: point.x / scaleX,
+        y: point.y / scaleY,
+      };
+
+      const scaledRadius = radius / Math.min(scaleX, scaleY);
+
+      // Distance formula
+      const distance = Math.sqrt(
+        Math.pow(scaledPoint.x - center.x, 2) +
+          Math.pow(scaledPoint.y - center.y, 2)
+      );
+
+      return distance <= scaledRadius;
+    }
+
+    // Function to check if a point is in a rectangle
+    function isPointInRect(point, topLeft, bottomRight) {
+      const { scaleX, scaleY } = getImageScaleRatio();
+
+      // Scale the point
+      const scaledPoint = {
+        x: point.x / scaleX,
+        y: point.y / scaleY,
+      };
+
+      return (
+        scaledPoint.x >= topLeft.x &&
+        scaledPoint.x <= bottomRight.x &&
+        scaledPoint.y >= topLeft.y &&
+        scaledPoint.y <= bottomRight.y
+      );
+    }
+
+    // Initialize the coordinates on load
+    parseCoordinates();
+
+    // Update coordinates when window resizes
+    window.addEventListener("resize", parseCoordinates);
+
+    // Handle direct click on the map image
+    mapImage.addEventListener("click", function (e) {
+      e.preventDefault();
+
+      // Get click coordinates relative to the image
+      const rect = mapImage.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      console.log(`Clicked at: ${clickX}, ${clickY}`);
+
+      // Find which area was clicked
+      let clickedArea = null;
+
+      for (const area of areaCoordinates) {
+        if (area.shape === "poly") {
+          if (isPointInPoly({ x: clickX, y: clickY }, area.points)) {
+            clickedArea = area;
+            break;
+          }
+        } else if (area.shape === "circle") {
+          if (
+            isPointInCircle(
+              { x: clickX, y: clickY },
+              area.points[0],
+              area.points[1].radius
+            )
+          ) {
+            clickedArea = area;
+            break;
+          }
+        } else if (area.shape === "rect") {
+          if (
+            isPointInRect(
+              { x: clickX, y: clickY },
+              area.points[0],
+              area.points[1]
+            )
+          ) {
+            clickedArea = area;
+            break;
+          }
+        }
+      }
+
+      if (clickedArea) {
+        console.log("Clicked on area:", clickedArea.title);
+
+        // Now show the modal with the appropriate images
+        showZoneModal(clickedArea.title);
+      } else {
+        console.log("No area clicked");
+      }
+    });
+
+    // Function to show the zone modal with images
+    function showZoneModal(zoneTitle) {
+      // Set modal title
+      document.querySelector(".modal-title").textContent =
+        formatZoneTitle(zoneTitle);
+
+      // Clear previous images
+      const sliderContainer = document.querySelector(".slider-container");
+      sliderContainer.innerHTML = "";
+
+      // Add images if available for this zone
+      if (zoneImageMap[zoneTitle]) {
+        const images = zoneImageMap[zoneTitle];
+
+        // Only proceed if we have images
+        if (images && images.length > 0) {
+          // Add first image
+          const img = document.createElement("img");
+          const imageSrc = images[0];
+
+          // Set these attributes before setting src to avoid FOUC (Flash of Unstyled Content)
+          img.alt = formatZoneTitle(zoneTitle);
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          // Show a loading indicator while the image loads
+          sliderContainer.innerHTML =
+            '<div style="text-align: center; padding: 20px;">Loading image...</div>';
+
+          // Preload the image before showing
+          const preloadImg = new Image();
+          preloadImg.onload = function () {
+            // Replace loading indicator with actual image once loaded
+            sliderContainer.innerHTML = "";
+            img.src = imageSrc;
+            sliderContainer.appendChild(img);
+            console.log("✅ Image loaded successfully:", imageSrc);
+          };
+
+          preloadImg.onerror = function () {
+            console.error("❌ Failed to load image:", imageSrc);
+            sliderContainer.innerHTML = "";
+            img.src =
+              "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+            sliderContainer.appendChild(img);
+          };
+
+          // Start loading the image
+          preloadImg.src = imageSrc;
+
+          // Store current image index and zone info
+          sliderContainer.dataset.currentIndex = "0";
+          sliderContainer.dataset.zoneTitle = zoneTitle;
+
+          // Show/hide navigation buttons based on number of images
+          const prevButton = document.querySelector(".prev-button");
+          const nextButton = document.querySelector(".next-button");
+
+          if (images.length > 1) {
+            prevButton.style.display = "block";
+            nextButton.style.display = "block";
+          } else {
+            prevButton.style.display = "none";
+            nextButton.style.display = "none";
+          }
+        }
+      }
+
+      // Show modal with a slight delay to ensure proper rendering
+      setTimeout(() => {
+        zoneModal.classList.add("active");
+      }, 50);
+    }
+
+    // Add click handlers to all areas as a fallback
     areas.forEach((area) => {
       area.addEventListener("click", function (e) {
         e.preventDefault();
+        e.stopPropagation(); // Stop event propagation to prevent bubbling
 
         // Get zone title from the area
         const zoneTitle = this.getAttribute("title");
-        console.log("Clicked zone:", zoneTitle);
+        console.log("Fallback clicked zone:", zoneTitle);
 
-        // Set modal title
-        document.querySelector(".modal-title").textContent =
-          formatZoneTitle(zoneTitle);
-
-        // Clear previous images
-        const sliderContainer = document.querySelector(".slider-container");
-        sliderContainer.innerHTML = "";
-
-        // Add images if available for this zone
-        if (zoneImageMap[zoneTitle]) {
-          const images = zoneImageMap[zoneTitle];
-
-          // Only proceed if we have images
-          if (images && images.length > 0) {
-            // Add first image with simple loading
-            sliderContainer.innerHTML =
-              '<div style="text-align: center; padding: 20px;">Loading image...</div>';
-
-            const img = new Image();
-            img.src = images[0];
-            img.alt = formatZoneTitle(zoneTitle);
-            img.className = "slider-fade";
-
-            img.onload = function () {
-              sliderContainer.innerHTML = "";
-              sliderContainer.appendChild(img);
-              console.log("Image loaded successfully:", images[0]);
-
-              // Make image clickable
-              img.style.cursor = "zoom-in";
-              img.addEventListener("click", function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const fullscreenView =
-                  document.querySelector(".fullscreen-view");
-                const fullscreenContainer = document.querySelector(
-                  ".fullscreen-image-container"
-                );
-
-                fullscreenContainer.innerHTML = "";
-                const clonedImg = img.cloneNode();
-                fullscreenContainer.appendChild(clonedImg);
-                fullscreenView.style.display = "flex";
-              });
-            };
-
-            img.onerror = function () {
-              console.error("Failed to load image:", images[0]);
-              sliderContainer.innerHTML =
-                '<div style="text-align: center;">Image failed to load</div>';
-            };
-
-            // Store current image index and zone info
-            sliderContainer.dataset.currentIndex = "0";
-            sliderContainer.dataset.zoneTitle = zoneTitle;
-
-            // Show/hide navigation buttons based on number of images
-            const prevButton = document.querySelector(".prev-button");
-            const nextButton = document.querySelector(".next-button");
-
-            if (images.length > 1) {
-              prevButton.style.display = "block";
-              nextButton.style.display = "block";
-            } else {
-              prevButton.style.display = "none";
-              nextButton.style.display = "none";
-            }
-          }
-        }
-
-        // Show modal
-        zoneModal.classList.add("active");
+        // Use the same function to show the modal
+        showZoneModal(zoneTitle);
       });
     });
 
-    // Close button
-    closeButton.addEventListener("click", function () {
+    // Handle touch events for mobile
+    mapImage.addEventListener("touchstart", function (e) {
+      e.preventDefault(); // Prevent default touch behavior
+
+      // Get touch coordinates relative to the image
+      const rect = mapImage.getBoundingClientRect();
+      const touch = e.touches[0];
+      const touchX = touch.clientX - rect.left;
+      const touchY = touch.clientY - rect.top;
+
+      console.log(`Touched at: ${touchX}, ${touchY}`);
+
+      // Find which area was touched
+      let touchedArea = null;
+
+      for (const area of areaCoordinates) {
+        if (area.shape === "poly") {
+          if (isPointInPoly({ x: touchX, y: touchY }, area.points)) {
+            touchedArea = area;
+            break;
+          }
+        } else if (area.shape === "circle") {
+          if (
+            isPointInCircle(
+              { x: touchX, y: touchY },
+              area.points[0],
+              area.points[1].radius
+            )
+          ) {
+            touchedArea = area;
+            break;
+          }
+        } else if (area.shape === "rect") {
+          if (
+            isPointInRect(
+              { x: touchX, y: touchY },
+              area.points[0],
+              area.points[1]
+            )
+          ) {
+            touchedArea = area;
+            break;
+          }
+        }
+      }
+
+      if (touchedArea) {
+        console.log("Touched area:", touchedArea.title);
+        showZoneModal(touchedArea.title);
+      } else {
+        console.log("No area touched");
+      }
+    });
+
+    // Close button - add explicit handling to prevent accidental closes
+    closeButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
       zoneModal.classList.remove("active");
     });
 
@@ -745,18 +624,166 @@
         e.stopPropagation();
       });
 
-    // Close when clicking the background
+    // Only close when clicking the background
     zoneModal.addEventListener("click", function (e) {
       if (e.target === this) {
         zoneModal.classList.remove("active");
       }
     });
 
-    // Close on ESC key
+    // Navigation buttons
+    const prevButton = document.querySelector(".prev-button");
+    const nextButton = document.querySelector(".next-button");
+
+    // Default to hiding buttons - they'll be shown if needed
+    prevButton.style.display = "none";
+    nextButton.style.display = "none";
+
+    prevButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const sliderContainer = document.querySelector(".slider-container");
+      const zoneTitle = sliderContainer.dataset.zoneTitle;
+      let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
+      const images = zoneImageMap[zoneTitle] || [];
+
+      if (images.length > 1) {
+        // Calculate previous index with wraparound
+        currentIndex = (currentIndex - 1 + images.length) % images.length;
+        sliderContainer.dataset.currentIndex = currentIndex.toString();
+
+        // Show loading indicator
+        sliderContainer.innerHTML =
+          '<div style="text-align: center; padding: 20px;">Loading image...</div>';
+
+        // Preload the image
+        const preloadImg = new Image();
+        const newSrc = images[currentIndex];
+
+        preloadImg.onload = function () {
+          // Create and add the new image
+          const img = document.createElement("img");
+          img.src = newSrc;
+          img.alt = formatZoneTitle(zoneTitle);
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          sliderContainer.innerHTML = "";
+          sliderContainer.appendChild(img);
+          console.log("Previous image loaded successfully:", newSrc);
+        };
+
+        preloadImg.onerror = function () {
+          console.error("Failed to load previous image:", newSrc);
+          const img = document.createElement("img");
+          img.src =
+            "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+          img.alt = "Error loading image";
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          sliderContainer.innerHTML = "";
+          sliderContainer.appendChild(img);
+        };
+
+        // Start loading the image
+        preloadImg.src = newSrc;
+      }
+    });
+
+    nextButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const sliderContainer = document.querySelector(".slider-container");
+      const zoneTitle = sliderContainer.dataset.zoneTitle;
+      let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
+      const images = zoneImageMap[zoneTitle] || [];
+
+      if (images.length > 1) {
+        // Calculate next index with wraparound
+        currentIndex = (currentIndex + 1) % images.length;
+        sliderContainer.dataset.currentIndex = currentIndex.toString();
+
+        // Show loading indicator
+        sliderContainer.innerHTML =
+          '<div style="text-align: center; padding: 20px;">Loading image...</div>';
+
+        // Preload the image
+        const preloadImg = new Image();
+        const newSrc = images[currentIndex];
+
+        preloadImg.onload = function () {
+          // Create and add the new image
+          const img = document.createElement("img");
+          img.src = newSrc;
+          img.alt = formatZoneTitle(zoneTitle);
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          sliderContainer.innerHTML = "";
+          sliderContainer.appendChild(img);
+          console.log("Next image loaded successfully:", newSrc);
+        };
+
+        preloadImg.onerror = function () {
+          console.error("Failed to load next image:", newSrc);
+          const img = document.createElement("img");
+          img.src =
+            "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+          img.alt = "Error loading image";
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          sliderContainer.innerHTML = "";
+          sliderContainer.appendChild(img);
+        };
+
+        // Start loading the image
+        preloadImg.src = newSrc;
+      }
+    });
+
+    // Close modal when ESC key is pressed
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && zoneModal.classList.contains("active")) {
         zoneModal.classList.remove("active");
       }
     });
+
+    // Update initial overlay opacity after a delay
+    setTimeout(() => {
+      const initialOverlay = document.querySelector(".initial-overlay");
+      if (initialOverlay) {
+        initialOverlay.style.opacity = "1";
+      }
+    }, 500);
+
+    // Show initial coordinates in console
+    mapImage.addEventListener("load", function () {
+      console.log(
+        "Map image loaded - dimensions:",
+        mapImage.offsetWidth,
+        "x",
+        mapImage.offsetHeight
+      );
+      parseCoordinates();
+    });
+
+    window.mapInitialized = true;
+    console.log("Map initialized successfully");
   });
 </script>
