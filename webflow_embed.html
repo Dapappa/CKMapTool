@@ -529,40 +529,61 @@
   });
 </script>
 
-<!-- Add responsive image map handling for mobile devices -->
+<!-- Add responsive image map handling for mobile devices with enhanced precision -->
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     // Get the map image and all area elements
     const mapImage = document.querySelector(".main-map");
     const areas = document.querySelectorAll("area");
+    const mapWrapper = document.querySelector(".map-wrapper");
 
-    // Store original coordinates for each area
+    // Add debug mode - set to true to see the clickable areas
+    const DEBUG_MODE = false;
+
+    // Function to get device type for better precision
+    function getDeviceType() {
+      const ua = navigator.userAgent;
+      if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
+        return "tablet";
+      }
+      if (
+        /Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(
+          ua
+        )
+      ) {
+        return "mobile";
+      }
+      return "desktop";
+    }
+
+    // Store original coordinates for each area with initial device size reference
     areas.forEach((area) => {
       // Save original coords as a data attribute
       area.setAttribute("data-original-coords", area.getAttribute("coords"));
+      area.setAttribute("data-title", area.getAttribute("title"));
     });
 
-    // Function to scale coordinates based on image size
+    // Enhanced coordinate scaling function with better precision
     function scaleCoordinates() {
       // Get the current dimensions of the map image
       const currentWidth = mapImage.clientWidth;
       const currentHeight = mapImage.clientHeight;
 
-      // Get the original/natural dimensions of the image
-      const originalWidth = mapImage.naturalWidth;
-      const originalHeight = mapImage.naturalHeight;
+      // Get the natural dimensions of the image (original size)
+      const originalWidth = mapImage.naturalWidth || 800; // Fallback if naturalWidth is not available
+      const originalHeight = mapImage.naturalHeight || 1200; // Fallback if naturalHeight is not available
 
-      // Calculate scaling factors
+      // Calculate scaling factors with more precision (using float)
       const widthFactor = currentWidth / originalWidth;
       const heightFactor = currentHeight / originalHeight;
 
       console.log(
-        `Map scaled: ${widthFactor.toFixed(2)}x width, ${heightFactor.toFixed(
-          2
-        )}x height`
+        `Map scaled: ${widthFactor.toFixed(4)}x width, ${heightFactor.toFixed(
+          4
+        )}x height, Device: ${getDeviceType()}`
       );
 
-      // Apply scaling to each area
+      // Apply precise scaling to each area
       areas.forEach((area) => {
         const originalCoords = area.getAttribute("data-original-coords");
 
@@ -575,101 +596,136 @@
           return;
         }
 
-        // Split coordinates into array of numbers
+        // Split coordinates into array of numbers with high precision
         const coords = originalCoords.split(",").map((coord) => {
-          // Parse coordinate to a number
-          const num = parseInt(coord, 10);
-
-          // Scale coordinate based on whether it's an x (even index) or y (odd index) coordinate
-          return num;
+          return parseFloat(coord);
         });
 
-        // Scale each coordinate appropriately
+        // Scale each coordinate more precisely using floating point math
         const scaledCoords = coords.map((coord, index) => {
           // Even indices (0, 2, 4...) are X coordinates, scale by width
           // Odd indices (1, 3, 5...) are Y coordinates, scale by height
-          return Math.round(
-            index % 2 === 0 ? coord * widthFactor : coord * heightFactor
-          );
+          const factor = index % 2 === 0 ? widthFactor : heightFactor;
+
+          // Use Math.round at the end to get integer pixel values
+          return Math.round(coord * factor);
         });
 
         // Set the new scaled coordinates
         area.setAttribute("coords", scaledCoords.join(","));
       });
+
+      // If in debug mode, show the map areas visually
+      if (DEBUG_MODE) {
+        renderDebugAreas();
+      }
     }
 
-    // Scale coordinates initially
-    if (mapImage.complete) {
-      scaleCoordinates();
-    } else {
-      mapImage.onload = scaleCoordinates;
-    }
+    // Function to visually display clickable areas for debugging
+    function renderDebugAreas() {
+      // Remove any existing debug visualization
+      const existingDebug = document.querySelector(".debug-overlay");
+      if (existingDebug) {
+        existingDebug.remove();
+      }
 
-    // Re-scale coordinates when window is resized
-    window.addEventListener("resize", scaleCoordinates);
+      // Create debug overlay
+      const debugOverlay = document.createElement("div");
+      debugOverlay.className = "debug-overlay";
+      debugOverlay.style.position = "absolute";
+      debugOverlay.style.top = "0";
+      debugOverlay.style.left = "0";
+      debugOverlay.style.width = "100%";
+      debugOverlay.style.height = "100%";
+      debugOverlay.style.pointerEvents = "none";
+      debugOverlay.style.zIndex = "50";
 
-    // Additional handler for device orientation changes
-    window.addEventListener("orientationchange", function () {
-      // Small delay to allow for DOM updates
-      setTimeout(scaleCoordinates, 200);
-    });
+      // Add SVG overlay for all polygons
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.style.width = "100%";
+      svg.style.height = "100%";
+      svg.style.position = "absolute";
+      svg.style.top = "0";
+      svg.style.left = "0";
 
-    // Debug function to visualize map areas (uncomment for testing)
-    /*
-    function debugMapAreas() {
-      const mapWrapper = document.querySelector('.map-wrapper');
-      const debugOverlay = document.createElement('div');
-      debugOverlay.style.position = 'absolute';
-      debugOverlay.style.top = '0';
-      debugOverlay.style.left = '0';
-      debugOverlay.style.width = '100%';
-      debugOverlay.style.height = '100%';
-      debugOverlay.style.pointerEvents = 'none';
-      
+      // Create each area visualization
       areas.forEach((area, index) => {
-        const coords = area.getAttribute('coords').split(',').map(Number);
-        const overlay = document.createElement('div');
-        overlay.style.position = 'absolute';
-        overlay.style.border = '2px solid rgba(255,0,0,0.5)';
-        overlay.style.backgroundColor = 'rgba(255,0,0,0.2)';
-        overlay.style.zIndex = '100';
-        overlay.style.pointerEvents = 'none';
-        
-        if (area.getAttribute('shape') === 'poly') {
-          // For polygons, create an SVG overlay
-          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-          svg.style.position = 'absolute';
-          svg.style.top = '0';
-          svg.style.left = '0';
-          svg.style.width = '100%';
-          svg.style.height = '100%';
-          svg.style.pointerEvents = 'none';
-          
-          const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        if (area.getAttribute("shape") === "poly") {
+          const coords = area.getAttribute("coords").split(",").map(Number);
+          const polygon = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "polygon"
+          );
+
+          // Create points string for polygon
           const points = [];
           for (let i = 0; i < coords.length; i += 2) {
-            points.push(`${coords[i]},${coords[i+1]}`);
+            points.push(`${coords[i]},${coords[i + 1]}`);
           }
-          polygon.setAttribute('points', points.join(' '));
-          polygon.setAttribute('fill', 'rgba(255,0,0,0.2)');
-          polygon.setAttribute('stroke', 'rgba(255,0,0,0.7)');
-          polygon.setAttribute('stroke-width', '2');
-          
+
+          // Add attributes to polygon
+          polygon.setAttribute("points", points.join(" "));
+          polygon.setAttribute(
+            "fill",
+            `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${
+              Math.random() * 255
+            }, 0.3)`
+          );
+          polygon.setAttribute("stroke", "#ff0000");
+          polygon.setAttribute("stroke-width", "2");
+
+          // Add title for hover info
+          const title = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "title"
+          );
+          title.textContent =
+            area.getAttribute("data-title") || area.getAttribute("title");
+          polygon.appendChild(title);
+
           svg.appendChild(polygon);
-          debugOverlay.appendChild(svg);
         }
       });
-      
+
+      debugOverlay.appendChild(svg);
       mapWrapper.appendChild(debugOverlay);
     }
-    
-    // Uncomment to enable debug visualization
-    // setTimeout(debugMapAreas, 1000);
-    */
+
+    // Scale coordinates on page load, after image loads
+    if (mapImage.complete) {
+      setTimeout(scaleCoordinates, 100); // Small delay to ensure accurate dimensions
+    } else {
+      mapImage.onload = function () {
+        setTimeout(scaleCoordinates, 100);
+      };
+    }
+
+    // Re-scale coordinates when window is resized with debounce to improve performance
+    let resizeTimer;
+    window.addEventListener("resize", function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(scaleCoordinates, 100);
+    });
+
+    // Re-scale when orientation changes on mobile
+    window.addEventListener("orientationchange", function () {
+      // Larger delay for orientation changes as they take longer to complete
+      setTimeout(scaleCoordinates, 300);
+    });
+
+    // Add additional device-specific scaling for better precision
+    const deviceType = getDeviceType();
+    if (deviceType === "mobile" || deviceType === "tablet") {
+      // Add touch-specific event handlers if needed
+      mapImage.addEventListener("touchstart", function (e) {
+        // Prevent zooming on double-tap
+        e.preventDefault();
+      });
+    }
   });
 </script>
 
-<!-- Add fullscreen image functionality for carousel images -->
+<!-- Add enhanced fullscreen image functionality with transitions -->
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     // Get fullscreen elements
@@ -678,91 +734,344 @@
       ".fullscreen-image-container"
     );
     const closeFullscreenBtn = document.querySelector(".close-fullscreen");
+    const zoneModal = document.querySelector(".zone-modal");
 
-    // Style for fullscreen view
-    fullscreenView.style.display = "none";
-    fullscreenView.style.position = "fixed";
-    fullscreenView.style.top = "0";
-    fullscreenView.style.left = "0";
-    fullscreenView.style.width = "100%";
-    fullscreenView.style.height = "100%";
-    fullscreenView.style.backgroundColor = "rgba(0, 0, 0, 0.9)";
-    fullscreenView.style.zIndex = "2000"; // Higher than the modal
-    fullscreenView.style.justifyContent = "center";
-    fullscreenView.style.alignItems = "center";
-    fullscreenView.style.flexDirection = "column";
+    // Add a visual indicator that images are clickable
+    const style = document.createElement("style");
+    style.textContent = `
+      .slider-container img {
+        cursor: zoom-in;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .slider-container img:hover {
+        transform: scale(1.02);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      }
+      
+      /* Enhanced image slider transitions */
+      .image-slider .slider-container {
+        transition: opacity 0.3s ease;
+      }
+      .image-slider .slider-container.loading {
+        opacity: 0.6;
+      }
+      
+      /* Animated loading indicator */
+      .loading-spinner {
+        display: inline-block;
+        width: 50px;
+        height: 50px;
+        border: 3px solid rgba(0,0,0,0.1);
+        border-radius: 50%;
+        border-top-color: #3498db;
+        animation: spin 1s ease-in-out infinite;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        margin-top: -25px;
+        margin-left: -25px;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      /* Fullscreen view enhancements */
+      .fullscreen-view {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.9);
+        z-index: 2000;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      
+      .fullscreen-view.active {
+        opacity: 1;
+      }
+      
+      .fullscreen-image-container img {
+        max-width: 95%;
+        max-height: 90vh;
+        object-fit: contain;
+        box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+        transform: scale(0.95);
+        opacity: 0;
+        transition: transform 0.4s ease, opacity 0.4s ease;
+      }
+      
+      .fullscreen-image-container img.loaded {
+        transform: scale(1);
+        opacity: 1;
+      }
+      
+      .close-fullscreen {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        font-size: 40px;
+        color: white;
+        cursor: pointer;
+        background-color: transparent;
+        border: none;
+        z-index: 2001;
+        opacity: 0.8;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+      }
+      
+      .close-fullscreen:hover {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+    `;
+    document.head.appendChild(style);
 
-    fullscreenContainer.style.maxWidth = "95%";
-    fullscreenContainer.style.maxHeight = "90%";
-    fullscreenContainer.style.position = "relative";
-    fullscreenContainer.style.display = "flex";
-    fullscreenContainer.style.justifyContent = "center";
-    fullscreenContainer.style.alignItems = "center";
-
-    closeFullscreenBtn.style.position = "absolute";
-    closeFullscreenBtn.style.top = "20px";
-    closeFullscreenBtn.style.right = "20px";
-    closeFullscreenBtn.style.fontSize = "40px";
-    closeFullscreenBtn.style.color = "white";
-    closeFullscreenBtn.style.cursor = "pointer";
-    closeFullscreenBtn.style.backgroundColor = "transparent";
-    closeFullscreenBtn.style.border = "none";
-    closeFullscreenBtn.style.zIndex = "2001";
-
-    // Function to show fullscreen image
+    // Function to show fullscreen image with enhanced transitions
     function showFullscreenImage(imageSrc, altText) {
+      // Create spinner for loading indication
+      fullscreenContainer.innerHTML = '<div class="loading-spinner"></div>';
+
+      // Show container first with animation
+      fullscreenView.style.display = "flex";
+
+      // Trigger reflow for animation
+      void fullscreenView.offsetWidth;
+
+      // Add active class to start animation
+      fullscreenView.classList.add("active");
+
       // Create new image element
-      const img = document.createElement("img");
+      const img = new Image();
       img.src = imageSrc;
       img.alt = altText || "Fullscreen image";
-      img.style.maxWidth = "100%";
-      img.style.maxHeight = "90vh";
-      img.style.objectFit = "contain";
-      img.style.boxShadow = "0 5px 30px rgba(0, 0, 0, 0.3)";
 
-      // Clear previous images and add new one
-      fullscreenContainer.innerHTML = "";
-      fullscreenContainer.appendChild(img);
+      // Set up event handling
+      img.onload = function () {
+        // Clear spinner and add loaded image
+        fullscreenContainer.innerHTML = "";
+        fullscreenContainer.appendChild(img);
 
-      // Show fullscreen view with fade-in animation
-      fullscreenView.style.display = "flex";
-      fullscreenView.style.opacity = "0";
+        // Trigger animation after a brief delay
+        setTimeout(() => {
+          img.classList.add("loaded");
+        }, 50);
+      };
+
+      img.onerror = function () {
+        fullscreenContainer.innerHTML =
+          '<div style="color: white; text-align: center;">Error loading image</div>';
+      };
+    }
+
+    // Enhanced close fullscreen function with smooth transitions
+    function closeFullscreen() {
+      // Fade out the fullscreen view
+      fullscreenView.classList.remove("active");
+
+      // Hide after transition
       setTimeout(() => {
-        fullscreenView.style.transition = "opacity 0.3s ease";
-        fullscreenView.style.opacity = "1";
-      }, 10);
+        fullscreenView.style.display = "none";
+        fullscreenContainer.innerHTML = "";
+      }, 300);
     }
 
     // Add click handler to close fullscreen view
     closeFullscreenBtn.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
-
-      // Fade out animation
-      fullscreenView.style.opacity = "0";
-      setTimeout(() => {
-        fullscreenView.style.display = "none";
-      }, 300);
+      closeFullscreen();
     });
 
     // Close when clicking outside the image
     fullscreenView.addEventListener("click", function (e) {
       if (e.target === fullscreenView) {
-        closeFullscreenBtn.click();
+        closeFullscreen();
       }
     });
 
     // Close on ESC key
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && fullscreenView.style.display !== "none") {
-        closeFullscreenBtn.click();
+      if (e.key === "Escape" && fullscreenView.classList.contains("active")) {
+        closeFullscreen();
       }
     });
 
-    // Add click listeners to images in the slider container
+    // Enhance the slider navigation for smooth transitions
+    function enhanceSliderNavigation() {
+      const prevButton = document.querySelector(".prev-button");
+      const nextButton = document.querySelector(".next-button");
+
+      // If the buttons exist and haven't been enhanced yet
+      if (prevButton && nextButton && !prevButton.dataset.enhanced) {
+        prevButton.dataset.enhanced = "true";
+        nextButton.dataset.enhanced = "true";
+
+        // Enhanced versions of the navigation functions
+        function enhancedPrevImage(e) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const sliderContainer = document.querySelector(".slider-container");
+          const zoneTitle = sliderContainer.dataset.zoneTitle;
+          let currentIndex = parseInt(
+            sliderContainer.dataset.currentIndex || 0
+          );
+          const images = zoneImageMap[zoneTitle] || [];
+
+          if (images.length > 1) {
+            // Add loading class for transition
+            sliderContainer.classList.add("loading");
+
+            // Calculate previous index with wraparound
+            currentIndex = (currentIndex - 1 + images.length) % images.length;
+            sliderContainer.dataset.currentIndex = currentIndex.toString();
+
+            // Create loading spinner
+            sliderContainer.innerHTML = '<div class="loading-spinner"></div>';
+
+            // Preload the image
+            const preloadImg = new Image();
+            const newSrc = images[currentIndex];
+
+            preloadImg.onload = function () {
+              // Create and add the new image with animation
+              const img = document.createElement("img");
+              img.src = newSrc;
+              img.alt = formatZoneTitle(zoneTitle);
+              img.className = "active";
+              img.style.opacity = "0";
+              img.style.transform = "translateX(-20px)";
+              img.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+
+              // Clear loading spinner and add new image
+              sliderContainer.innerHTML = "";
+              sliderContainer.appendChild(img);
+
+              // Trigger animation after a brief delay
+              setTimeout(() => {
+                img.style.opacity = "1";
+                img.style.transform = "translateX(0)";
+                sliderContainer.classList.remove("loading");
+              }, 50);
+
+              console.log("Previous image loaded successfully:", newSrc);
+
+              // Apply clickable behavior to the new image
+              addImageClickHandler(img);
+            };
+
+            preloadImg.onerror = function () {
+              console.error("Failed to load previous image:", newSrc);
+              sliderContainer.innerHTML =
+                '<div style="text-align: center;">Error loading image</div>';
+              sliderContainer.classList.remove("loading");
+            };
+
+            // Start loading the image
+            preloadImg.src = newSrc;
+          }
+        }
+
+        function enhancedNextImage(e) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const sliderContainer = document.querySelector(".slider-container");
+          const zoneTitle = sliderContainer.dataset.zoneTitle;
+          let currentIndex = parseInt(
+            sliderContainer.dataset.currentIndex || 0
+          );
+          const images = zoneImageMap[zoneTitle] || [];
+
+          if (images.length > 1) {
+            // Add loading class for transition
+            sliderContainer.classList.add("loading");
+
+            // Calculate next index with wraparound
+            currentIndex = (currentIndex + 1) % images.length;
+            sliderContainer.dataset.currentIndex = currentIndex.toString();
+
+            // Create loading spinner
+            sliderContainer.innerHTML = '<div class="loading-spinner"></div>';
+
+            // Preload the image
+            const preloadImg = new Image();
+            const newSrc = images[currentIndex];
+
+            preloadImg.onload = function () {
+              // Create and add the new image with animation
+              const img = document.createElement("img");
+              img.src = newSrc;
+              img.alt = formatZoneTitle(zoneTitle);
+              img.className = "active";
+              img.style.opacity = "0";
+              img.style.transform = "translateX(20px)";
+              img.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+
+              // Clear loading spinner and add new image
+              sliderContainer.innerHTML = "";
+              sliderContainer.appendChild(img);
+
+              // Trigger animation after a brief delay
+              setTimeout(() => {
+                img.style.opacity = "1";
+                img.style.transform = "translateX(0)";
+                sliderContainer.classList.remove("loading");
+              }, 50);
+
+              console.log("Next image loaded successfully:", newSrc);
+
+              // Apply clickable behavior to the new image
+              addImageClickHandler(img);
+            };
+
+            preloadImg.onerror = function () {
+              console.error("Failed to load next image:", newSrc);
+              sliderContainer.innerHTML =
+                '<div style="text-align: center;">Error loading image</div>';
+              sliderContainer.classList.remove("loading");
+            };
+
+            // Start loading the image
+            preloadImg.src = newSrc;
+          }
+        }
+
+        // Replace the existing event listeners with enhanced ones
+        prevButton.removeEventListener("click", prevButton.onclick);
+        nextButton.removeEventListener("click", nextButton.onclick);
+
+        prevButton.onclick = enhancedPrevImage;
+        nextButton.onclick = enhancedNextImage;
+      }
+    }
+
+    // Function to add click handler to an image
+    function addImageClickHandler(imgElement) {
+      if (!imgElement.dataset.zoomable) {
+        imgElement.dataset.zoomable = "true";
+
+        imgElement.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          // Show image in fullscreen
+          showFullscreenImage(this.src, this.alt);
+        });
+      }
+    }
+
+    // Setup the click handlers for carousel images using MutationObserver
     function setupImageClickHandlers() {
-      // We need to use a mutation observer since images are dynamically added
+      // Watch for changes to the slider container to handle dynamically added images
       const sliderContainer = document.querySelector(".slider-container");
+      if (!sliderContainer) return;
 
       // Create a MutationObserver to watch for added images
       const observer = new MutationObserver(function (mutations) {
@@ -776,26 +1085,38 @@
             });
           }
         });
+
+        // Also check for changes in the navigation elements
+        enhanceSliderNavigation();
       });
 
       // Start observing the slider container for added images
-      observer.observe(sliderContainer, { childList: true });
+      observer.observe(sliderContainer, {
+        childList: true,
+        subtree: true,
+      });
 
-      // Function to add click handler to an image
-      function addImageClickHandler(imgElement) {
-        imgElement.style.cursor = "zoom-in";
-
-        imgElement.addEventListener("click", function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-
-          // Show image in fullscreen
-          showFullscreenImage(this.src, this.alt);
-        });
-      }
+      // Also enhance the slider navigation
+      enhanceSliderNavigation();
     }
 
-    // Setup the click handlers for carousel images
+    // Initialize image handlers
     setupImageClickHandlers();
+
+    // Handle modal opening to enhance slider navigation
+    if (zoneModal) {
+      const observer = new MutationObserver(function (mutations) {
+        mutations.forEach(function (mutation) {
+          if (mutation.attributeName === "class") {
+            if (zoneModal.classList.contains("active")) {
+              // Modal opened, enhance navigation
+              setTimeout(enhanceSliderNavigation, 100);
+            }
+          }
+        });
+      });
+
+      observer.observe(zoneModal, { attributes: true });
+    }
   });
 </script>
