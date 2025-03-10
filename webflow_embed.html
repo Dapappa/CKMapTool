@@ -31,57 +31,51 @@
 
   .modal-content {
     background-color: #fff;
-    width: 95%;
-    max-width: 1200px;
-    max-height: 95vh;
-    border-radius: 12px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-    position: relative;
   }
 
   .modal-header {
-    padding: 15px 20px;
+    padding: 15px;
     border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: #f8f9fa;
+    position: relative;
   }
 
   .modal-title {
     margin: 0;
-    font-size: 24px;
-    color: #333;
+    font-size: 1.5rem;
+    text-align: center;
   }
 
   .close-button {
-    background: none;
-    border: none;
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
     font-size: 28px;
+    font-weight: bold;
+    background: transparent;
+    border: none;
     cursor: pointer;
-    padding: 0 8px;
-    color: #666;
-    transition: color 0.3s ease;
-  }
-
-  .close-button:hover {
-    color: #333;
   }
 
   .image-slider {
     position: relative;
-    width: 100%;
-    background-color: #000;
+    padding: 15px;
   }
 
   .image-slider img {
     max-width: 100%;
-    max-height: 75vh;
+    max-height: 60vh;
     display: block;
     margin: 0 auto;
-    object-fit: contain;
+    cursor: pointer;
     transition: transform 0.3s ease;
+    border-radius: 4px;
   }
 
   .image-slider img:hover {
@@ -94,8 +88,10 @@
     justify-content: center;
     position: relative;
     min-height: 200px;
-    background-color: #000;
-    padding: 20px 0;
+    margin-bottom: 10px;
+    background-color: #f8f8f8;
+    border-radius: 4px;
+    padding: 10px;
   }
 
   .prev-button,
@@ -103,128 +99,161 @@
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
     border: none;
     border-radius: 50%;
     width: 40px;
     height: 40px;
-    font-size: 24px;
+    font-size: 20px;
+    line-height: 1;
     cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     z-index: 2;
-  }
-
-  .prev-button {
-    left: 20px;
-  }
-
-  .next-button {
-    right: 20px;
+    transition: background-color 0.3s;
   }
 
   .prev-button:hover,
   .next-button:hover {
-    background-color: rgba(255, 255, 255, 0.9);
-    transform: translateY(-50%) scale(1.1);
+    background-color: rgba(0, 0, 0, 0.8);
   }
 
+  .prev-button {
+    left: 10px;
+  }
+
+  .next-button {
+    right: 10px;
+  }
+
+  /* Initial overlay styling */
   .initial-overlay {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
     display: flex;
     justify-content: center;
     align-items: center;
+    background-color: rgba(0, 0, 0, 0.4);
     opacity: 0;
-    transition: opacity 0.5s ease, transform 0.5s ease;
-    pointer-events: none;
+    transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+    z-index: 10;
+    visibility: visible;
   }
 
   .initial-overlay.fade-out {
     opacity: 0;
-    transform: translateY(-20px);
+    visibility: hidden;
   }
 
   .instruction-text {
     color: white;
     font-size: 24px;
     text-align: center;
-    padding: 20px;
-    background-color: rgba(0, 0, 0, 0.7);
-    border-radius: 10px;
-    font-family: "Bangers", sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    padding: 15px 25px;
+    background-color: rgba(0, 0, 0, 0.6);
+    border-radius: 8px;
+    max-width: 80%;
+    font-weight: bold;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
   }
 
-  /* Mobile-specific styles */
+  /* Fullscreen view styling */
+  .fullscreen-view {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .fullscreen-view.active {
+    display: flex !important;
+  }
+
+  .fullscreen-image-container {
+    position: relative;
+    width: 90%;
+    height: 90%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .fullscreen-image-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+  }
+
+  .close-fullscreen {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 36px;
+    color: white;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    z-index: 2001;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    transition: background-color 0.3s;
+  }
+
+  .close-fullscreen:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+
+  /* Responsive styles */
   @media (max-width: 768px) {
-    .modal-content {
-      width: 100%;
-      height: 100%;
-      max-height: 100vh;
-      border-radius: 0;
+    .instruction-text {
+      font-size: 18px;
+      padding: 12px 20px;
     }
 
     .modal-title {
-      font-size: 20px;
-    }
-
-    .instruction-text {
-      font-size: 18px;
-      padding: 15px;
+      font-size: 1.2rem;
     }
 
     .prev-button,
     .next-button {
-      width: 36px;
-      height: 36px;
-      font-size: 20px;
+      width: 32px;
+      height: 32px;
+      font-size: 16px;
     }
 
-    .image-slider img {
-      max-height: 70vh;
-    }
-  }
-
-  /* Loading animation */
-  .loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #3498db;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 20px auto;
-  }
-
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
+    .close-fullscreen {
+      top: 15px;
+      right: 15px;
+      font-size: 28px;
+      width: 40px;
+      height: 40px;
     }
   }
 
-  /* Image counter */
-  .image-counter {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 5px 10px;
-    border-radius: 15px;
-    font-size: 14px;
-    z-index: 2;
+  @media (max-width: 480px) {
+    .instruction-text {
+      font-size: 16px;
+      padding: 10px 15px;
+    }
+
+    .slider-container {
+      min-height: 150px;
+    }
   }
 </style>
 
@@ -359,7 +388,6 @@
         </div>
         <button class="prev-button">&larr;</button>
         <button class="next-button">&rarr;</button>
-        <div class="image-counter"></div>
       </div>
     </div>
   </div>
@@ -388,6 +416,9 @@
     const closeButton = document.querySelector(".close-button");
     const mapImage = document.querySelector(".main-map");
     const mapWrapper = document.querySelector(".map-wrapper");
+    const initialOverlay = document.querySelector(".initial-overlay");
+    const fullscreenView = document.querySelector(".fullscreen-view");
+    const closeFullscreenButton = document.querySelector(".close-fullscreen");
 
     // Define image paths with exact filenames from the repository
     const zoneImageMap = {
@@ -583,6 +614,32 @@
     // Update coordinates when window resizes
     window.addEventListener("resize", parseCoordinates);
 
+    // Find which area was clicked based on coordinates
+    function findClickedArea(x, y) {
+      for (const area of areaCoordinates) {
+        if (area.shape === "poly") {
+          if (isPointInPoly({ x: x, y: y }, area.points)) {
+            return area;
+          }
+        } else if (area.shape === "circle") {
+          if (
+            isPointInCircle(
+              { x: x, y: y },
+              area.points[0],
+              area.points[1].radius
+            )
+          ) {
+            return area;
+          }
+        } else if (area.shape === "rect") {
+          if (isPointInRect({ x: x, y: y }, area.points[0], area.points[1])) {
+            return area;
+          }
+        }
+      }
+      return null;
+    }
+
     // Handle direct click on the map image
     mapImage.addEventListener("click", function (e) {
       e.preventDefault();
@@ -595,42 +652,12 @@
       console.log(`Clicked at: ${clickX}, ${clickY}`);
 
       // Find which area was clicked
-      let clickedArea = null;
-
-      for (const area of areaCoordinates) {
-        if (area.shape === "poly") {
-          if (isPointInPoly({ x: clickX, y: clickY }, area.points)) {
-            clickedArea = area;
-            break;
-          }
-        } else if (area.shape === "circle") {
-          if (
-            isPointInCircle(
-              { x: clickX, y: clickY },
-              area.points[0],
-              area.points[1].radius
-            )
-          ) {
-            clickedArea = area;
-            break;
-          }
-        } else if (area.shape === "rect") {
-          if (
-            isPointInRect(
-              { x: clickX, y: clickY },
-              area.points[0],
-              area.points[1]
-            )
-          ) {
-            clickedArea = area;
-            break;
-          }
-        }
-      }
+      const clickedArea = findClickedArea(clickX, clickY);
 
       if (clickedArea) {
         console.log("Clicked on area:", clickedArea.title);
-
+        // Remove the initial overlay after a click
+        fadeOutOverlay();
         // Now show the modal with the appropriate images
         showZoneModal(clickedArea.title);
       } else {
@@ -678,6 +705,11 @@
             img.src = imageSrc;
             sliderContainer.appendChild(img);
             console.log("✅ Image loaded successfully:", imageSrc);
+
+            // Add click event to show fullscreen
+            img.addEventListener("click", function () {
+              showFullscreen(imageSrc, zoneTitle);
+            });
           };
 
           preloadImg.onerror = function () {
@@ -715,6 +747,44 @@
       }, 50);
     }
 
+    // Function to show fullscreen image
+    function showFullscreen(src, title) {
+      const container = document.querySelector(".fullscreen-image-container");
+      container.innerHTML = "";
+
+      // Create new image
+      const img = document.createElement("img");
+
+      // Show loading indicator
+      container.innerHTML =
+        '<div style="color: white; text-align: center; font-size: 18px;">Loading full resolution image...</div>';
+
+      // Preload image
+      const preloadImg = new Image();
+      preloadImg.onload = function () {
+        container.innerHTML = "";
+        img.src = src;
+        img.alt = formatZoneTitle(title);
+        container.appendChild(img);
+      };
+
+      preloadImg.onerror = function () {
+        container.innerHTML =
+          '<div style="color: red; text-align: center; font-size: 18px;">Error loading image</div>';
+      };
+
+      // Start loading
+      preloadImg.src = src;
+
+      // Show the fullscreen view
+      fullscreenView.classList.add("active");
+    }
+
+    // Close fullscreen view
+    function closeFullscreen() {
+      fullscreenView.classList.remove("active");
+    }
+
     // Add click handlers to all areas as a fallback
     areas.forEach((area) => {
       area.addEventListener("click", function (e) {
@@ -725,62 +795,74 @@
         const zoneTitle = this.getAttribute("title");
         console.log("Fallback clicked zone:", zoneTitle);
 
+        // Fade out the overlay
+        fadeOutOverlay();
+
         // Use the same function to show the modal
         showZoneModal(zoneTitle);
       });
     });
 
-    // Handle touch events for mobile
-    mapImage.addEventListener("touchstart", function (e) {
-      e.preventDefault(); // Prevent default touch behavior
-
-      // Get touch coordinates relative to the image
-      const rect = mapImage.getBoundingClientRect();
-      const touch = e.touches[0];
-      const touchX = touch.clientX - rect.left;
-      const touchY = touch.clientY - rect.top;
-
-      console.log(`Touched at: ${touchX}, ${touchY}`);
-
-      // Find which area was touched
-      let touchedArea = null;
-
-      for (const area of areaCoordinates) {
-        if (area.shape === "poly") {
-          if (isPointInPoly({ x: touchX, y: touchY }, area.points)) {
-            touchedArea = area;
-            break;
-          }
-        } else if (area.shape === "circle") {
-          if (
-            isPointInCircle(
-              { x: touchX, y: touchY },
-              area.points[0],
-              area.points[1].radius
-            )
-          ) {
-            touchedArea = area;
-            break;
-          }
-        } else if (area.shape === "rect") {
-          if (
-            isPointInRect(
-              { x: touchX, y: touchY },
-              area.points[0],
-              area.points[1]
-            )
-          ) {
-            touchedArea = area;
-            break;
-          }
-        }
+    // Function to fade out the initial overlay
+    function fadeOutOverlay() {
+      if (initialOverlay) {
+        initialOverlay.classList.add("fade-out");
       }
+    }
 
-      if (touchedArea) {
-        console.log("Touched area:", touchedArea.title);
-        showZoneModal(touchedArea.title);
-      } else {
-        console.log("No area touched");
+    // Automatically fade out the initial overlay after 5 seconds
+    setTimeout(fadeOutOverlay, 5000);
+
+    // Improve touch handling for mobile
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchMoved = false;
+    const touchThreshold = 10; // Threshold to detect if touch was a tap or a scroll
+
+    mapImage.addEventListener(
+      "touchstart",
+      function (e) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchMoved = false;
+      },
+      { passive: true }
+    );
+
+    mapImage.addEventListener(
+      "touchmove",
+      function () {
+        touchMoved = true;
+      },
+      { passive: true }
+    );
+
+    mapImage.addEventListener("touchend", function (e) {
+      // Only consider it a tap if the touch didn't move much
+      if (
+        !touchMoved ||
+        (Math.abs(e.changedTouches[0].clientX - touchStartX) < touchThreshold &&
+          Math.abs(e.changedTouches[0].clientY - touchStartY) < touchThreshold)
+      ) {
+        e.preventDefault();
+
+        // Get touch coordinates relative to the image
+        const rect = mapImage.getBoundingClientRect();
+        const touchX = e.changedTouches[0].clientX - rect.left;
+        const touchY = e.changedTouches[0].clientY - rect.top;
+
+        console.log(`Touched at: ${touchX}, ${touchY}`);
+
+        // Find which area was touched
+        const touchedArea = findClickedArea(touchX, touchY);
+
+        if (touchedArea) {
+          console.log("Touched area:", touchedArea.title);
+          fadeOutOverlay();
+          showZoneModal(touchedArea.title);
+        } else {
+          console.log("No area touched");
+        }
       }
     });
 
@@ -789,6 +871,13 @@
       e.preventDefault();
       e.stopPropagation();
       zoneModal.classList.remove("active");
+    });
+
+    // Close fullscreen button handler
+    closeFullscreenButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeFullscreen();
     });
 
     // Prevent closing when clicking inside the modal content
@@ -802,6 +891,13 @@
     zoneModal.addEventListener("click", function (e) {
       if (e.target === this) {
         zoneModal.classList.remove("active");
+      }
+    });
+
+    // Only close fullscreen when clicking the background
+    fullscreenView.addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeFullscreen();
       }
     });
 
@@ -849,6 +945,11 @@
           sliderContainer.innerHTML = "";
           sliderContainer.appendChild(img);
           console.log("Previous image loaded successfully:", newSrc);
+
+          // Add click event to show fullscreen
+          img.addEventListener("click", function () {
+            showFullscreen(newSrc, zoneTitle);
+          });
         };
 
         preloadImg.onerror = function () {
@@ -908,6 +1009,11 @@
           sliderContainer.innerHTML = "";
           sliderContainer.appendChild(img);
           console.log("Next image loaded successfully:", newSrc);
+
+          // Add click event to show fullscreen
+          img.addEventListener("click", function () {
+            showFullscreen(newSrc, zoneTitle);
+          });
         };
 
         preloadImg.onerror = function () {
@@ -933,14 +1039,17 @@
 
     // Close modal when ESC key is pressed
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && zoneModal.classList.contains("active")) {
-        zoneModal.classList.remove("active");
+      if (e.key === "Escape") {
+        if (fullscreenView.classList.contains("active")) {
+          closeFullscreen();
+        } else if (zoneModal.classList.contains("active")) {
+          zoneModal.classList.remove("active");
+        }
       }
     });
 
     // Update initial overlay opacity after a delay
     setTimeout(() => {
-      const initialOverlay = document.querySelector(".initial-overlay");
       if (initialOverlay) {
         initialOverlay.style.opacity = "1";
       }
@@ -957,62 +1066,28 @@
       parseCoordinates();
     });
 
-    window.mapInitialized = true;
-    console.log("Map initialized successfully");
+    // Load a mobile-optimized SVG if on small screens
+    function checkScreenSize() {
+      // If window width is less than 768px, we're on mobile
+      if (
+        window.innerWidth < 768 &&
+        !mapImage.hasAttribute("data-mobile-loaded")
+      ) {
+        console.log("Loading mobile-optimized map...");
+        // Mark that we've already loaded the mobile version to avoid reloading
+        mapImage.setAttribute("data-mobile-loaded", "true");
 
-    // Fade out initial overlay after 3 seconds
-    setTimeout(() => {
-      const initialOverlay = document.querySelector(".initial-overlay");
-      if (initialOverlay) {
-        initialOverlay.classList.add("fade-out");
-        // Remove the overlay after animation completes
-        setTimeout(() => {
-          initialOverlay.style.display = "none";
-        }, 500);
-      }
-    }, 3000);
-
-    // Update image counter when showing images
-    function updateImageCounter(currentIndex, totalImages) {
-      const counter = document.querySelector(".image-counter");
-      if (counter) {
-        counter.textContent = `${currentIndex + 1} / ${totalImages}`;
+        // You would need a mobile-optimized SVG file in your repository
+        // The following is just an example - the actual file would need to exist
+        // mapImage.src = "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/City%20Map%20Mobile.svg";
       }
     }
 
-    // Modify your showZoneModal function to include the counter
-    const originalShowZoneModal = showZoneModal;
-    window.showZoneModal = function (zoneTitle) {
-      originalShowZoneModal(zoneTitle);
-      const images = zoneImageMap[zoneTitle] || [];
-      if (images.length > 0) {
-        updateImageCounter(0, images.length);
-      }
-    };
+    // Check on load and resize
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
 
-    // Get navigation buttons
-    const navigationButtons = {
-      prev: document.querySelector(".prev-button"),
-      next: document.querySelector(".next-button"),
-    };
-
-    // Update the counter when navigating images
-    navigationButtons.prev.addEventListener("click", function () {
-      const sliderContainer = document.querySelector(".slider-container");
-      const zoneTitle = sliderContainer.dataset.zoneTitle;
-      const currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
-      const images = zoneImageMap[zoneTitle] || [];
-      const newIndex = (currentIndex - 1 + images.length) % images.length;
-      updateImageCounter(newIndex, images.length);
-    });
-
-    navigationButtons.next.addEventListener("click", function () {
-      const sliderContainer = document.querySelector(".slider-container");
-      const zoneTitle = sliderContainer.dataset.zoneTitle;
-      const currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
-      const images = zoneImageMap[zoneTitle] || [];
-      const newIndex = (currentIndex + 1) % images.length;
-      updateImageCounter(newIndex, images.length);
-    });
+    window.mapInitialized = true;
+    console.log("Map initialized successfully");
   });
 </script>
