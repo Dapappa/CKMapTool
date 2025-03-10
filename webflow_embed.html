@@ -205,12 +205,18 @@
   defer
 ></script>
 
-<!-- Add responsive image map handling for mobile devices - simplified version -->
+<!-- Add responsive image map handling for mobile devices - improved scaling -->
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     // Get the map image and all area elements
     const mapImage = document.querySelector(".main-map");
     const areas = document.querySelectorAll("area");
+
+    // For debugging touch points (set to true to see touch markers)
+    const SHOW_TOUCH_POINTS = false;
+
+    // Store original map dimensions for accurate scaling
+    let originalWidth, originalHeight;
 
     // Store original coordinates for each area
     areas.forEach((area) => {
@@ -218,7 +224,7 @@
       area.setAttribute("data-original-coords", area.getAttribute("coords"));
     });
 
-    // Simple coordinate scaling function - improved reliability
+    // Enhanced coordinate scaling function with aspect ratio preservation
     function scaleCoordinates() {
       if (!mapImage) return;
 
@@ -226,9 +232,14 @@
       const currentWidth = mapImage.clientWidth;
       const currentHeight = mapImage.clientHeight;
 
-      // Get the natural dimensions of the image
-      const originalWidth = mapImage.naturalWidth || 800; // Fallback if naturalWidth is not available
-      const originalHeight = mapImage.naturalHeight || 1200; // Fallback if naturalHeight is not available
+      // Get the natural dimensions of the image (only once)
+      if (!originalWidth || !originalHeight) {
+        originalWidth = mapImage.naturalWidth || 800;
+        originalHeight = mapImage.naturalHeight || 1200;
+        console.log(
+          `Original map dimensions: ${originalWidth}x${originalHeight}`
+        );
+      }
 
       // Calculate scaling factors
       const widthFactor = currentWidth / originalWidth;
@@ -240,7 +251,11 @@
         )}x height`
       );
 
-      // Apply scaling to each area
+      // Fix for mobile devices - additional adjustment for better vertical accuracy on tall screens
+      const isMobile = window.innerWidth < 768;
+      const mobileHeightAdjustment = isMobile ? 1.0 : 1.0; // Adjust this value if needed
+
+      // Apply scaling to each area with special handling for mobile
       areas.forEach((area) => {
         const originalCoords = area.getAttribute("data-original-coords");
 
@@ -250,15 +265,61 @@
         // Split coordinates into array of numbers
         const coords = originalCoords.split(",").map(Number);
 
-        // Scale each coordinate
+        // Scale each coordinate with precise math
         const scaledCoords = coords.map((coord, index) => {
-          return Math.round(
-            index % 2 === 0 ? coord * widthFactor : coord * heightFactor
-          );
+          // Even indices (0, 2, 4...) are X coordinates, scale by width
+          // Odd indices (1, 3, 5...) are Y coordinates, scale by height
+          if (index % 2 === 0) {
+            return Math.round(coord * widthFactor);
+          } else {
+            return Math.round(coord * heightFactor * mobileHeightAdjustment);
+          }
         });
 
         // Set the new scaled coordinates
         area.setAttribute("coords", scaledCoords.join(","));
+      });
+
+      // Add touch indicator if enabled
+      if (SHOW_TOUCH_POINTS) {
+        setupTouchDebugging();
+      }
+    }
+
+    // Function to display touch points for debugging
+    function setupTouchDebugging() {
+      const mapWrapper = document.querySelector(".map-wrapper");
+      if (!mapWrapper) return;
+
+      // Create or get touch indicator
+      let touchIndicator = document.getElementById("touch-indicator");
+      if (!touchIndicator) {
+        touchIndicator = document.createElement("div");
+        touchIndicator.id = "touch-indicator";
+        touchIndicator.style.position = "absolute";
+        touchIndicator.style.width = "20px";
+        touchIndicator.style.height = "20px";
+        touchIndicator.style.borderRadius = "50%";
+        touchIndicator.style.backgroundColor = "rgba(255, 0, 0, 0.5)";
+        touchIndicator.style.transform = "translate(-50%, -50%)";
+        touchIndicator.style.pointerEvents = "none";
+        touchIndicator.style.zIndex = "1000";
+        mapWrapper.appendChild(touchIndicator);
+      }
+
+      // Show touch indicator where touches occur
+      mapImage.addEventListener("touchstart", function (e) {
+        e.preventDefault(); // Prevent double-tap zoom
+        const touch = e.touches[0];
+        const rect = mapImage.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+
+        touchIndicator.style.left = x + "px";
+        touchIndicator.style.top = y + "px";
+        touchIndicator.style.display = "block";
+
+        console.log(`Touch at: ${x}, ${y}`);
       });
     }
 
@@ -274,7 +335,7 @@
       }
     }
 
-    // Handle window resize with debounce for better performance
+    // Handle window resize with debounce
     let resizeTimer;
     window.addEventListener("resize", function () {
       clearTimeout(resizeTimer);
@@ -283,175 +344,84 @@
       }, 100);
     });
 
-    // Handle orientation change on mobile devices
+    // Handle orientation change
     window.addEventListener("orientationchange", function () {
       // Wait for the orientation change to finish
       setTimeout(function () {
         requestAnimationFrame(scaleCoordinates);
-      }, 200);
+      }, 300);
     });
   });
 </script>
 
-<!-- Add simple fullscreen image functionality for carousel images -->
+<!-- Enhance carousel with swipe support and better mobile styling -->
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    // Get elements
-    const fullscreenView = document.querySelector(".fullscreen-view");
-    const fullscreenContainer = document.querySelector(
-      ".fullscreen-image-container"
-    );
-    const closeFullscreenBtn = document.querySelector(".close-fullscreen");
-
-    // Add simple styles
+    // Add improved mobile styling
     const style = document.createElement("style");
     style.textContent = `
-      .slider-container img {
-        cursor: zoom-in;
-      }
-      .fullscreen-view {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.9);
-        z-index: 2000;
-        justify-content: center;
-        align-items: center;
-      }
-      .fullscreen-image-container img {
-        max-width: 95%;
-        max-height: 85vh;
-        object-fit: contain;
-      }
-      .close-fullscreen {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        font-size: 40px;
-        color: white;
-        cursor: pointer;
-        background: transparent;
-        border: none;
-        z-index: 2001;
-      }
-      
-      /* Simple loading indicator */
-      .image-loading {
-        color: white;
-        text-align: center;
-        padding: 20px;
-      }
-    `;
-    document.head.appendChild(style);
-
-    // Simple function to show fullscreen image
-    function showFullscreenImage(src, alt) {
-      fullscreenContainer.innerHTML =
-        '<div class="image-loading">Loading image...</div>';
-      fullscreenView.style.display = "flex";
-
-      const img = new Image();
-      img.src = src;
-      img.alt = alt || "";
-
-      img.onload = function () {
-        fullscreenContainer.innerHTML = "";
-        fullscreenContainer.appendChild(img);
-      };
-
-      img.onerror = function () {
-        fullscreenContainer.innerHTML =
-          '<div class="image-loading">Failed to load image</div>';
-      };
-    }
-
-    // Close fullscreen view
-    function closeFullscreen() {
-      fullscreenView.style.display = "none";
-      fullscreenContainer.innerHTML = "";
-    }
-
-    // Close button click
-    closeFullscreenBtn.addEventListener("click", function () {
-      closeFullscreen();
-    });
-
-    // Click outside to close
-    fullscreenView.addEventListener("click", function (e) {
-      if (e.target === fullscreenView) {
-        closeFullscreen();
-      }
-    });
-
-    // ESC key to close
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && fullscreenView.style.display === "flex") {
-        closeFullscreen();
-      }
-    });
-
-    // Add click handlers to images in slider
-    function setupImageClickHandlers() {
-      // Watch for new images being added to the slider
-      const sliderContainer = document.querySelector(".slider-container");
-      if (!sliderContainer) return;
-
-      // Use MutationObserver to catch new images
-      const observer = new MutationObserver(function (mutations) {
-        mutations.forEach(function (mutation) {
-          mutation.addedNodes.forEach(function (node) {
-            if (node.nodeName === "IMG") {
-              // Make image clickable
-              node.style.cursor = "zoom-in";
-              node.addEventListener("click", function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                showFullscreenImage(this.src, this.alt);
-              });
-            }
-          });
-        });
-      });
-
-      observer.observe(sliderContainer, { childList: true });
-    }
-
-    // Initialize click handlers
-    setupImageClickHandlers();
-  });
-</script>
-
-<!-- Enhance slider with simple transitions -->
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    // Add styles for slider transitions
-    const style = document.createElement("style");
-    style.textContent = `
-      .prev-button, .next-button {
-        background: rgba(0, 0, 0, 0.5);
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        font-size: 20px;
-        cursor: pointer;
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 10;
-      }
-      .prev-button {
-        left: 10px;
-      }
-      .next-button {
-        right: 10px;
+      /* Mobile-optimized carousel */
+      @media (max-width: 767px) {
+        .modal-content {
+          width: 95%;
+          max-width: 95%;
+          max-height: 80vh;
+        }
+        
+        .modal-title {
+          font-size: 18px;
+          padding: 10px;
+        }
+        
+        .slider-container {
+          min-height: 250px;
+        }
+        
+        .prev-button, .next-button {
+          width: 50px;
+          height: 50px;
+          font-size: 24px;
+          background: rgba(0, 0, 0, 0.7);
+          color: white;
+          border: none;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 5px;
+        }
+        
+        /* Swipe hint animation */
+        .swipe-hint {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background-color: rgba(0, 0, 0, 0.6);
+          color: white;
+          padding: 10px 15px;
+          border-radius: 20px;
+          font-size: 14px;
+          opacity: 0;
+          transition: opacity 0.3s;
+          pointer-events: none;
+          z-index: 10;
+        }
+        
+        .swipe-hint.show {
+          opacity: 1;
+          animation: fadeInOut 2s ease-in-out;
+        }
+        
+        @keyframes fadeInOut {
+          0% { opacity: 0; }
+          20% { opacity: 1; }
+          80% { opacity: 1; }
+          100% { opacity: 0; }
+        }
       }
       
-      /* Simple fade transition */
+      /* Carousel transitions */
       .slider-fade {
         animation: fadeIn 0.3s ease;
       }
@@ -463,144 +433,150 @@
     `;
     document.head.appendChild(style);
 
-    // Enhance buttons when they exist
-    function enhanceSliderButtons() {
-      const prevButton = document.querySelector(".prev-button");
-      const nextButton = document.querySelector(".next-button");
+    // Add swipe functionality to carousel
+    function setupSwipeNavigation() {
+      const zoneModal = document.querySelector(".zone-modal");
+      if (!zoneModal) return;
 
-      if (prevButton && nextButton && !prevButton.dataset.enhanced) {
-        prevButton.dataset.enhanced = "true";
-        nextButton.dataset.enhanced = "true";
+      // Create swipe hint element
+      const swipeHint = document.createElement("div");
+      swipeHint.className = "swipe-hint";
+      swipeHint.textContent = "Swipe to view more";
 
-        // Override click handlers for smooth transitions
-        prevButton.addEventListener("click", function (e) {
-          e.preventDefault();
-          e.stopPropagation();
+      // Touch tracking variables
+      let startX, startY, endX, endY;
+      let minSwipeDistance = 50; // Minimum distance to trigger swipe
 
-          const sliderContainer = document.querySelector(".slider-container");
-          const zoneTitle = sliderContainer.dataset.zoneTitle;
-          let currentIndex = parseInt(
-            sliderContainer.dataset.currentIndex || 0
-          );
-          const images = zoneImageMap[zoneTitle] || [];
+      // Show the swipe hint when a carousel with multiple images opens
+      function showSwipeHint() {
+        const sliderContainer = document.querySelector(".slider-container");
+        if (!sliderContainer) return;
 
-          if (images.length > 1) {
-            // Calculate previous index
-            currentIndex = (currentIndex - 1 + images.length) % images.length;
-            sliderContainer.dataset.currentIndex = currentIndex.toString();
+        const zoneTitle = sliderContainer.dataset.zoneTitle;
+        const images = zoneImageMap[zoneTitle] || [];
 
-            // Show loading
-            sliderContainer.innerHTML =
-              '<div style="text-align: center; padding: 20px;">Loading image...</div>';
+        // Only show hint if there are multiple images
+        if (images.length > 1) {
+          sliderContainer.appendChild(swipeHint);
+          swipeHint.classList.add("show");
 
-            // Load new image
-            const img = new Image();
-            img.src = images[currentIndex];
-            img.alt = formatZoneTitle(zoneTitle);
-            img.className = "slider-fade";
-
-            img.onload = function () {
-              sliderContainer.innerHTML = "";
-              sliderContainer.appendChild(img);
-
-              // Make clickable
-              img.style.cursor = "zoom-in";
-              img.addEventListener("click", function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const fullscreenView =
-                  document.querySelector(".fullscreen-view");
-                const fullscreenContainer = document.querySelector(
-                  ".fullscreen-image-container"
-                );
-
-                fullscreenContainer.innerHTML = "";
-                fullscreenContainer.appendChild(img.cloneNode());
-                fullscreenView.style.display = "flex";
-              });
-            };
-
-            img.onerror = function () {
-              sliderContainer.innerHTML =
-                '<div style="text-align: center; padding: 20px;">Failed to load image</div>';
-            };
-          }
-        });
-
-        nextButton.addEventListener("click", function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-
-          const sliderContainer = document.querySelector(".slider-container");
-          const zoneTitle = sliderContainer.dataset.zoneTitle;
-          let currentIndex = parseInt(
-            sliderContainer.dataset.currentIndex || 0
-          );
-          const images = zoneImageMap[zoneTitle] || [];
-
-          if (images.length > 1) {
-            // Calculate next index
-            currentIndex = (currentIndex + 1) % images.length;
-            sliderContainer.dataset.currentIndex = currentIndex.toString();
-
-            // Show loading
-            sliderContainer.innerHTML =
-              '<div style="text-align: center; padding: 20px;">Loading image...</div>';
-
-            // Load new image
-            const img = new Image();
-            img.src = images[currentIndex];
-            img.alt = formatZoneTitle(zoneTitle);
-            img.className = "slider-fade";
-
-            img.onload = function () {
-              sliderContainer.innerHTML = "";
-              sliderContainer.appendChild(img);
-
-              // Make clickable
-              img.style.cursor = "zoom-in";
-              img.addEventListener("click", function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const fullscreenView =
-                  document.querySelector(".fullscreen-view");
-                const fullscreenContainer = document.querySelector(
-                  ".fullscreen-image-container"
-                );
-
-                fullscreenContainer.innerHTML = "";
-                fullscreenContainer.appendChild(img.cloneNode());
-                fullscreenView.style.display = "flex";
-              });
-            };
-
-            img.onerror = function () {
-              sliderContainer.innerHTML =
-                '<div style="text-align: center; padding: 20px;">Failed to load image</div>';
-            };
-          }
-        });
+          // Remove hint after animation
+          setTimeout(() => {
+            swipeHint.classList.remove("show");
+          }, 2000);
+        }
       }
-    }
 
-    // Check for buttons when the modal opens
-    const zoneModal = document.querySelector(".zone-modal");
-    if (zoneModal) {
+      // Swipe navigation handler
+      function handleSwipe(direction) {
+        const sliderContainer = document.querySelector(".slider-container");
+        if (!sliderContainer) return;
+
+        const zoneTitle = sliderContainer.dataset.zoneTitle;
+        let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
+        const images = zoneImageMap[zoneTitle] || [];
+
+        if (images.length <= 1) return;
+
+        // Determine next index based on swipe direction
+        if (direction === "left") {
+          currentIndex = (currentIndex + 1) % images.length;
+        } else if (direction === "right") {
+          currentIndex = (currentIndex - 1 + images.length) % images.length;
+        }
+
+        sliderContainer.dataset.currentIndex = currentIndex.toString();
+
+        // Update image with animation
+        sliderContainer.innerHTML =
+          '<div style="text-align: center; padding: 20px;">Loading image...</div>';
+
+        const img = new Image();
+        img.src = images[currentIndex];
+        img.alt = formatZoneTitle(zoneTitle);
+        img.className = "slider-fade";
+
+        img.onload = function () {
+          sliderContainer.innerHTML = "";
+          sliderContainer.appendChild(img);
+
+          // Make image clickable for fullscreen
+          img.style.cursor = "zoom-in";
+          img.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const fullscreenView = document.querySelector(".fullscreen-view");
+            const fullscreenContainer = document.querySelector(
+              ".fullscreen-image-container"
+            );
+
+            fullscreenContainer.innerHTML = "";
+            fullscreenContainer.appendChild(img.cloneNode());
+            fullscreenView.style.display = "flex";
+          });
+        };
+
+        img.onerror = function () {
+          sliderContainer.innerHTML =
+            '<div style="text-align: center; padding: 20px;">Failed to load image</div>';
+        };
+      }
+
+      // Register touch event handlers on modal
+      zoneModal.addEventListener(
+        "touchstart",
+        function (e) {
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+        },
+        { passive: true }
+      );
+
+      zoneModal.addEventListener(
+        "touchend",
+        function (e) {
+          if (!startX) return;
+
+          endX = e.changedTouches[0].clientX;
+          endY = e.changedTouches[0].clientY;
+
+          // Calculate distance and direction
+          const diffX = endX - startX;
+          const diffY = endY - startY;
+
+          // Only trigger if horizontal swipe is greater than vertical and meets minimum distance
+          if (
+            Math.abs(diffX) > Math.abs(diffY) &&
+            Math.abs(diffX) > minSwipeDistance
+          ) {
+            const direction = diffX > 0 ? "right" : "left";
+            handleSwipe(direction);
+          }
+
+          // Reset values
+          startX = startY = endX = endY = null;
+        },
+        { passive: true }
+      );
+
+      // Show hint when modal opens
       const observer = new MutationObserver(function (mutations) {
         mutations.forEach(function (mutation) {
           if (
             mutation.attributeName === "class" &&
             zoneModal.classList.contains("active")
           ) {
-            setTimeout(enhanceSliderButtons, 50);
+            setTimeout(showSwipeHint, 500);
           }
         });
       });
 
       observer.observe(zoneModal, { attributes: true });
     }
+
+    // Initialize swipe navigation
+    setupSwipeNavigation();
   });
 </script>
 
