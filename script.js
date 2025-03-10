@@ -774,11 +774,108 @@ document.addEventListener("DOMContentLoaded", function () {
     // Show the current image
     showCurrentImage();
 
+    // Add region navigation shortcuts if mobile
+    if (isMobile) {
+      addRegionNavigationShortcuts();
+    }
+
     // Show the modal
     zoneModal.classList.add("active");
 
     // Setup navigation buttons
     setupModalNavigation();
+  }
+
+  /**
+   * Add region navigation shortcuts for mobile users
+   */
+  function addRegionNavigationShortcuts() {
+    // Get or create the shortcuts container
+    let shortcutsContainer = document.querySelector(".region-shortcuts");
+
+    if (!shortcutsContainer) {
+      shortcutsContainer = document.createElement("div");
+      shortcutsContainer.className = "region-shortcuts";
+      shortcutsContainer.style.display = "flex";
+      shortcutsContainer.style.justifyContent = "center";
+      shortcutsContainer.style.padding = "10px 0";
+      shortcutsContainer.style.borderTop = "1px solid #eee";
+      shortcutsContainer.style.marginTop = "10px";
+
+      // Append to modal body
+      const modalBody = document.querySelector(".modal-body");
+      if (modalBody) {
+        modalBody.appendChild(shortcutsContainer);
+      }
+    } else {
+      // Clear existing shortcuts
+      shortcutsContainer.innerHTML = "";
+    }
+
+    // Define the regions we want shortcuts for
+    const regions = [
+      { label: "DT", pattern: "Downtown" },
+      { label: "NE", pattern: "NorthEast" },
+      { label: "NW", pattern: "NorthWest" },
+      { label: "SE", pattern: "SouthEast" },
+      { label: "SW", pattern: "SouthWest" },
+    ];
+
+    // Create a button for each region
+    regions.forEach((region) => {
+      const btn = document.createElement("button");
+      btn.textContent = region.label;
+      btn.style.margin = "0 5px";
+      btn.style.padding = "8px 12px";
+      btn.style.backgroundColor = "#f0f0f0";
+      btn.style.border = "1px solid #ccc";
+      btn.style.borderRadius = "4px";
+      btn.style.cursor = "pointer";
+      btn.style.fontSize = "14px";
+      btn.style.fontWeight = "bold";
+      btn.title = region.pattern; // Add tooltip for full region name
+
+      // Highlight the current region's button
+      const currentZone = allZones[currentZoneIndex];
+      if (currentZone && currentZone.title.includes(region.pattern)) {
+        btn.style.backgroundColor = "#3498db";
+        btn.style.color = "white";
+      }
+
+      // Add click handler
+      btn.addEventListener("click", () => {
+        navigateToRegion(region.pattern);
+      });
+
+      shortcutsContainer.appendChild(btn);
+    });
+  }
+
+  /**
+   * Navigate to the first zone that matches the region pattern
+   */
+  function navigateToRegion(regionPattern) {
+    // Find the first zone that matches the pattern
+    const zoneIndex = allZones.findIndex((zone) =>
+      zone.title.includes(regionPattern)
+    );
+
+    if (zoneIndex !== -1) {
+      // Update current zone index
+      currentZoneIndex = zoneIndex;
+      // Reset image index
+      currentImageIndex = 0;
+      // Show the new zone
+      showCurrentImage();
+      // Update the shortcuts to highlight the current region
+      if (isMobile) {
+        addRegionNavigationShortcuts();
+      }
+      // Update the title
+      modalTitle.textContent = formatZoneTitle(
+        allZones[currentZoneIndex].title
+      );
+    }
   }
 
   function showCurrentImage() {
@@ -848,8 +945,56 @@ document.addEventListener("DOMContentLoaded", function () {
     nextButton.onclick = nextImage;
     closeButton.onclick = closeModal;
 
+    // Setup swipe gestures for mobile
+    setupCarouselSwipeGestures();
+
     // Setup keyboard navigation
     document.addEventListener("keydown", handleModalKeydown);
+  }
+
+  /**
+   * Add swipe gesture support for the carousel
+   */
+  function setupCarouselSwipeGestures() {
+    // Touch variables
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const minSwipeDistance = 50; // Minimum distance required for a swipe
+
+    if (!sliderContainer) return;
+
+    sliderContainer.addEventListener(
+      "touchstart",
+      function (e) {
+        touchStartX = e.changedTouches[0].screenX;
+      },
+      { passive: true }
+    );
+
+    sliderContainer.addEventListener(
+      "touchend",
+      function (e) {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipe();
+      },
+      { passive: true }
+    );
+
+    function handleSwipe() {
+      // Calculate swipe distance
+      const swipeDistance = touchEndX - touchStartX;
+
+      // Check if swipe is significant enough
+      if (Math.abs(swipeDistance) >= minSwipeDistance) {
+        if (swipeDistance > 0) {
+          // Swipe right -> Previous image
+          prevImage();
+        } else {
+          // Swipe left -> Next image
+          nextImage();
+        }
+      }
+    }
   }
 
   function handleModalKeydown(e) {
@@ -879,6 +1024,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const images = zoneObj.imagePaths;
     currentImageIndex = (currentImageIndex + 1) % images.length;
     showCurrentImage();
+
+    // Make sure title is always in sync with the current zone
+    modalTitle.textContent = formatZoneTitle(zoneObj.title);
   }
 
   function prevImage() {
@@ -889,6 +1037,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const images = zoneObj.imagePaths;
     currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
     showCurrentImage();
+
+    // Make sure title is always in sync with the current zone
+    modalTitle.textContent = formatZoneTitle(zoneObj.title);
   }
 
   /**********************************************************
