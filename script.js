@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let userInteracted = false;
   let isFirstTap = true;
   let lastClickedZone = null;
-  let isMobile = false; // Default to desktop view
+  let isMobile = window.innerWidth <= 768; // Go back to simple check
   let lastMapWidth = 0;
   let lastMapHeight = 0;
   let debugMode = false; // Set to true for debugging coordinate mapping
@@ -61,9 +61,6 @@ document.addEventListener("DOMContentLoaded", function () {
       debugMode = true;
       createDebugOverlay();
     }
-
-    // More reliable way to detect mobile devices
-    detectDeviceType();
 
     // Ensure the map container doesn't block scrolling
     if (mapContainer) {
@@ -134,9 +131,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // Handle resizing
     let resizeTimer;
     window.addEventListener("resize", () => {
+      isMobile = window.innerWidth <= 768;
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
-        detectDeviceType(); // Use our improved device detection
         const dimensionsChanged = checkMapDimensionChanges();
         updateAreaHighlights();
 
@@ -151,7 +148,7 @@ document.addEventListener("DOMContentLoaded", function () {
     window.addEventListener("orientationchange", () => {
       setTimeout(() => {
         console.log("Orientation changed, updating map");
-        detectDeviceType(); // Use our improved device detection
+        isMobile = window.innerWidth <= 768;
         const dimensionsChanged = checkMapDimensionChanges();
         updateAreaHighlights();
 
@@ -160,36 +157,6 @@ document.addEventListener("DOMContentLoaded", function () {
           updateDebugOverlay();
         }
       }, 300);
-    });
-  }
-
-  /**
-   * More reliable device type detection
-   */
-  function detectDeviceType() {
-    // Check for touch capability
-    const hasTouchScreen =
-      "ontouchstart" in window ||
-      navigator.maxTouchPoints > 0 ||
-      navigator.msMaxTouchPoints > 0;
-
-    // Check for small screen
-    const hasSmallScreen = window.innerWidth <= 768;
-
-    // Check for mobile user agent (optional additional check)
-    const mobileUserAgent =
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      );
-
-    // Desktop browsers in narrow windows should still get desktop behavior
-    isMobile = (hasTouchScreen && hasSmallScreen) || mobileUserAgent;
-
-    console.log("Device detection:", {
-      hasTouchScreen,
-      hasSmallScreen,
-      mobileUserAgent,
-      isMobile,
     });
   }
 
