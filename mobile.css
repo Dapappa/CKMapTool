@@ -1,19 +1,21 @@
 /* Mobile Specific Styles */
 @media (max-width: 768px) {
-  /* Mobile region grid layout */
+  /* Adjust mobile regions container to fit within the map area */
   .mobile-regions-container {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: #f5f5f5;
+    position: absolute;
+    top: 10%;
+    left: 5%;
+    width: 90%;
+    height: 80%;
+    background-color: rgba(245, 245, 245, 0.9);
+    border-radius: 16px;
     z-index: 10;
-    padding: 10px;
-    overflow: hidden;
+    padding: 15px;
+    display: none;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: space-evenly;
+    align-items: center;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
   }
 
   .mobile-regions-container.active {
@@ -23,7 +25,8 @@
 
   .mobile-regions-row {
     display: flex;
-    justify-content: space-between;
+    justify-content: space-around;
+    width: 100%;
     height: 30%;
     margin-bottom: 10px;
   }
@@ -34,8 +37,9 @@
   }
 
   .mobile-region {
-    width: 48%;
+    width: 45%;
     height: 100%;
+    margin: 5px;
     border-radius: 12px;
     display: flex;
     justify-content: center;
@@ -46,7 +50,7 @@
     text-align: center;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    animation: pulse-animation 2s infinite;
+    animation: pulse-animation 2.5s infinite;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
@@ -61,7 +65,7 @@
     bottom: 0;
     background: linear-gradient(
       45deg,
-      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.2) 0%,
       rgba(255, 255, 255, 0) 100%
     );
     z-index: 1;
@@ -71,45 +75,48 @@
     transform: scale(0.95);
   }
 
+  /* More professional, modern colors */
   .nw-region {
-    background-color: #3498db;
+    background-color: #3366cc;
     animation-delay: 0s;
   }
 
   .ne-region {
-    background-color: #e74c3c;
+    background-color: #cc6633;
     animation-delay: 0.4s;
   }
 
   .downtown-region {
-    background-color: #9b59b6;
-    width: 70%;
+    background-color: #6633cc;
+    width: 60%;
     animation-delay: 0.8s;
   }
 
   .sw-region {
-    background-color: #2ecc71;
+    background-color: #33cc66;
     animation-delay: 1.2s;
   }
 
   .se-region {
-    background-color: #f39c12;
+    background-color: #cc9933;
     animation-delay: 1.6s;
   }
 
-  /* 3D Carousel Styles */
+  /* Adjust carousel container to fit within the map area */
   .mobile-carousel-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
+    position: absolute;
+    top: 10%;
+    left: 5%;
+    width: 90%;
+    height: 80%;
+    background-color: rgba(0, 0, 0, 0.9);
+    border-radius: 16px;
     z-index: 20;
     display: none;
     justify-content: center;
     align-items: center;
     perspective: 1000px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
   }
 
   .mobile-carousel-container.active {
@@ -174,16 +181,21 @@
     color: #333;
     padding: 10px;
     text-align: center;
+    background-color: #f0f0f0;
+    border-top: 1px solid #e0e0e0;
   }
 
+  /* Position carousel controls in the middle on the sides */
   .carousel-controls {
     position: absolute;
-    bottom: 15px;
     width: 100%;
+    top: 50%;
+    transform: translateY(-50%);
     display: flex;
     justify-content: space-between;
-    padding: 0 20px;
+    padding: 0 10px;
     z-index: 3;
+    pointer-events: none;
   }
 
   .carousel-button {
@@ -196,8 +208,16 @@
     justify-content: center;
     align-items: center;
     font-size: 1.2rem;
+    color: #333;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     cursor: pointer;
+    pointer-events: auto;
+    transition: background-color 0.3s, transform 0.3s;
+  }
+
+  .carousel-button:hover {
+    background-color: rgba(255, 255, 255, 1);
+    transform: scale(1.1);
   }
 
   .carousel-close {
@@ -216,6 +236,12 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     z-index: 3;
     cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s;
+  }
+
+  .carousel-close:hover {
+    background-color: rgba(255, 255, 255, 1);
+    transform: scale(1.1);
   }
 
   .view-fullscreen-button {
@@ -224,7 +250,7 @@
     left: 50%;
     transform: translateX(-50%);
     padding: 8px 16px;
-    background-color: #3498db;
+    background-color: #3366cc;
     color: white;
     border: none;
     border-radius: 20px;
@@ -233,6 +259,12 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     z-index: 3;
     cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s;
+  }
+
+  .view-fullscreen-button:hover {
+    background-color: #2255bb;
+    transform: scale(1.05);
   }
 
   /* Pulse animation for the region boxes */
@@ -242,7 +274,7 @@
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     }
     50% {
-      transform: scale(1.03);
+      transform: scale(1.02);
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
     }
     100% {
@@ -279,6 +311,8 @@
   /* Make sure the map container fills the screen on mobile */
   .map-container {
     height: 100vh;
+    width: 100%;
+    position: relative;
     overflow: hidden;
   }
 }

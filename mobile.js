@@ -239,17 +239,26 @@ document.addEventListener("DOMContentLoaded", function () {
     if (currentCarouselImages.length === 0) return;
 
     const currentSrc = currentCarouselImages[currentCarouselIndex];
-    const carouselTitle = document.querySelector(".carousel-title");
-    const regionName = carouselTitle
-      ? carouselTitle.textContent.split(" - ")[0]
-      : "Region";
+    const fullscreenView = document.querySelector(".fullscreen-view");
+    const fullscreenContainer = document.querySelector(
+      ".fullscreen-image-container"
+    );
 
-    // Use the main script's showFullscreen function
-    if (typeof window.showFullscreen === "function") {
-      window.showFullscreen(currentSrc, regionName);
-    } else {
-      console.error("showFullscreen function not available");
-    }
+    // Clear previous image
+    fullscreenContainer.innerHTML = "";
+
+    // Create and add new image
+    const img = document.createElement("img");
+    img.src = currentSrc;
+    img.alt = "Fullscreen View";
+    img.style.maxWidth = "100%";
+    img.style.maxHeight = "100%";
+    img.style.objectFit = "contain";
+
+    fullscreenContainer.appendChild(img);
+
+    // Show fullscreen view
+    fullscreenView.classList.add("active");
   }
 
   /**
@@ -316,4 +325,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Set flag to prevent duplicate initialization
   window.mobileInitialized = true;
+
+  // Make sure the view fullscreen button works
+  const viewFullscreenButton = document.querySelector(
+    ".view-fullscreen-button"
+  );
+  if (viewFullscreenButton) {
+    viewFullscreenButton.addEventListener("click", viewCurrentImageFullscreen);
+  }
+
+  // Also ensure close fullscreen button works
+  const closeFullscreenButton = document.querySelector(".close-fullscreen");
+  if (closeFullscreenButton) {
+    closeFullscreenButton.addEventListener("click", function () {
+      const fullscreenView = document.querySelector(".fullscreen-view");
+      fullscreenView.classList.remove("active");
+    });
+  }
 });
