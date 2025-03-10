@@ -230,6 +230,14 @@ document.addEventListener("DOMContentLoaded", function () {
         );
         polygon.setAttribute("class", `zone-highlight zone-${index}`);
         polygon.setAttribute("data-zone", zone.title);
+
+        // Set SVG styling attributes explicitly
+        polygon.setAttribute("fill", "rgba(255, 0, 0, 0.2)");
+        polygon.setAttribute("stroke", "#ff0000");
+        polygon.setAttribute("stroke-width", "3");
+        polygon.setAttribute("fill-opacity", "0");
+        polygon.setAttribute("stroke-opacity", "0");
+
         svg.appendChild(polygon);
       }
     });
@@ -1118,6 +1126,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // Clear all highlights first
     document.querySelectorAll(".zone-highlight").forEach((highlight) => {
       highlight.classList.remove("active");
+      // Reset SVG attributes
+      highlight.setAttribute("fill-opacity", "0");
+      highlight.setAttribute("stroke-opacity", "0");
     });
 
     // Find the zone index
@@ -1128,7 +1139,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const highlight = document.querySelector(
       `.zone-highlight.zone-${zoneIndex}`
     );
-    if (highlight) highlight.classList.add("active");
+    if (highlight) {
+      highlight.classList.add("active");
+      // Set SVG attributes directly in addition to class
+      highlight.setAttribute("fill-opacity", "0.6");
+      highlight.setAttribute("stroke-opacity", "1");
+    }
   }
 
   /**
