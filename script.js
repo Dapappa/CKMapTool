@@ -37,6 +37,64 @@ document.addEventListener("DOMContentLoaded", function () {
   // Image paths for zones (external JSON or directly defined here)
   const imageBaseURL = "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/";
 
+  // Make zoneImageMap configurable - can be overridden before init
+  window.CKMapConfig = window.CKMapConfig || {};
+  window.CKMapConfig.zoneImageMap = window.CKMapConfig.zoneImageMap || {
+    // Default zone images if not provided
+    NorthWestAreaA: [
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152ca79e102efac06d9c_Northwest%20Calgary%20Distribution%20Map%20(3)-1.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152cf32904d35d17f639_Northwest%20Calgary%20Distribution%20Map%20(3)-2.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152d08ea1ae1f650e810_Northwest%20Calgary%20Distribution%20Map%20(3)-3.png",
+    ],
+    NorthWestAreaB: [
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152ca79e102efac06d9c_Northwest%20Calgary%20Distribution%20Map%20(3)-1.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152cf32904d35d17f639_Northwest%20Calgary%20Distribution%20Map%20(3)-2.png",
+    ],
+    NorthWestAreaC: [
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152ca79e102efac06d9c_Northwest%20Calgary%20Distribution%20Map%20(3)-1.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152cf32904d35d17f639_Northwest%20Calgary%20Distribution%20Map%20(3)-2.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152d08ea1ae1f650e810_Northwest%20Calgary%20Distribution%20Map%20(3)-3.png",
+    ],
+    NorthEastAreaA: [
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152c2d59410587b5d1bf_North%20East-1.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152ce965c5b385b91dbc_North%20East-2.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152d32c401d798b756d5_North%20East-3.png",
+    ],
+    NorthEastAreaB: [
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152c2d59410587b5d1bf_North%20East-1.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152ce965c5b385b91dbc_North%20East-2.png",
+    ],
+    NorthEastAreaC: [
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152c2d59410587b5d1bf_North%20East-1.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152ce965c5b385b91dbc_North%20East-2.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152d32c401d798b756d5_North%20East-3.png",
+    ],
+    DowntownAreaA: [
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce1656df0450fd7aa4d763_Downtown%20Calgary%20Map%20(1)-1.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce16564099212dfea6b2b2_Downtown%20Calgary%20Map%20(1)-2.png",
+    ],
+    DowntownAreaB: [
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce1656df0450fd7aa4d763_Downtown%20Calgary%20Map%20(1)-1.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce16564099212dfea6b2b2_Downtown%20Calgary%20Map%20(1)-2.png",
+    ],
+    SouthEastAreaA: [
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67c1d2b874833dd5316b3ca8_South%20East%20Completed-2.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67c1d2b874833dd5316b3ca8_South%20East%20Completed-2.png",
+    ],
+    SouthEastAreaB: [
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67c1d2b874833dd5316b3ca8_South%20East%20Completed-2.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67c1d2b874833dd5316b3ca8_South%20East%20Completed-2.png",
+    ],
+    SouthWestAreaA: [
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152c3c238822c45316cd_Southwest%20Map%20(2)-1.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152c530f75df6093d3d7_Southwest%20Map%20(2)-2.png",
+    ],
+    SouthWestAreaB: [
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152c3c238822c45316cd_Southwest%20Map%20(2)-1.png",
+      "https://cdn.prod.website-files.com/64d572ccd997a626d3de38d6/67ce152c530f75df6093d3d7_Southwest%20Map%20(2)-2.png",
+    ],
+  };
+
   // State variables
   let allZones = [];
   let currentZoneIndex = 0;
@@ -152,7 +210,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Debug info
     console.log("CKMapTool initialized");
-    console.log("Zones detected:", Object.keys(zoneImageMap).length);
+    console.log(
+      "Zones detected:",
+      Object.keys(window.CKMapConfig.zoneImageMap).length
+    );
     console.log("Screen size:", window.innerWidth, "x", window.innerHeight);
     console.log("Device pixel ratio:", window.devicePixelRatio);
     console.log("Is mobile:", isMobile);
@@ -243,23 +304,44 @@ document.addEventListener("DOMContentLoaded", function () {
 
     allZones = [];
 
-    // Process each area
+    // Reference to the configurable zoneImageMap
+    const zoneImageMap = window.CKMapConfig.zoneImageMap;
+
+    // Build the zones array from <area> + zoneImageMap
+    if (mapAreas) {
+      Array.from(mapAreas).forEach((area) => {
+        const title = area.getAttribute("title");
+        const shape = area.getAttribute("shape");
+
+        console.log("Found area:", title);
+      });
+
+      console.log("Zones detected:", Object.keys(zoneImageMap).length);
+    }
+
+    // Parse coordinates from area elements
     mapAreas.forEach((area) => {
-      const title = area.getAttribute("title");
+      try {
+        const coords = area.getAttribute("coords").split(",").map(Number);
+        const shape = area.getAttribute("shape");
+        const title = area.getAttribute("title");
 
-      // Skip if no title or not in zoneImageMap
-      if (!title || !zoneImageMap[title]) return;
+        // Skip if no title or not in zoneImageMap
+        if (!title || !zoneImageMap[title]) return;
 
-      // Create zone object
-      const zone = {
-        title: title,
-        coords: area.getAttribute("coords").split(",").map(Number),
-        shape: area.getAttribute("shape"),
-        imagePaths: zoneImageMap[title],
-        element: area,
-      };
+        // Create zone object for internal use
+        const zone = {
+          title: title,
+          coords: coords,
+          shape: shape,
+          imagePaths: zoneImageMap[title],
+          element: area,
+        };
 
-      allZones.push(zone);
+        allZones.push(zone);
+      } catch (e) {
+        console.error("Error parsing zone data:", e);
+      }
     });
 
     console.log(`Processed ${allZones.length} active zones`);
@@ -721,6 +803,9 @@ document.addEventListener("DOMContentLoaded", function () {
   function openZoneModal(title) {
     resetTapState();
 
+    // Reference to the configurable zoneImageMap
+    const zoneImageMap = window.CKMapConfig.zoneImageMap;
+
     // Find zone index
     currentZoneIndex = findZoneIndexByTitle(title);
     if (currentZoneIndex === -1) {
@@ -744,6 +829,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Setup navigation buttons
     setupModalNavigation();
+
+    // Set modal title
+    modalTitle.textContent = formatZoneTitle(title);
   }
 
   /**
@@ -980,29 +1068,35 @@ document.addEventListener("DOMContentLoaded", function () {
    * 13) Next/Prev image in the same zone
    **********************************************************/
   function nextImage() {
-    if (!allZones.length) return;
-    const zoneObj = allZones[currentZoneIndex];
-    if (!zoneObj) return;
+    // Reference to the configurable zoneImageMap
+    const zoneImageMap = window.CKMapConfig.zoneImageMap;
 
-    const images = zoneObj.imagePaths;
+    if (!lastClickedZone) return;
+
+    const zoneTitle = lastClickedZone;
+    const images = zoneImageMap[zoneTitle] || [];
+
     currentImageIndex = (currentImageIndex + 1) % images.length;
     showCurrentImage();
 
     // Make sure title is always in sync with the current zone
-    modalTitle.textContent = formatZoneTitle(zoneObj.title);
+    modalTitle.textContent = formatZoneTitle(zoneTitle);
   }
 
   function prevImage() {
-    if (!allZones.length) return;
-    const zoneObj = allZones[currentZoneIndex];
-    if (!zoneObj) return;
+    // Reference to the configurable zoneImageMap
+    const zoneImageMap = window.CKMapConfig.zoneImageMap;
 
-    const images = zoneObj.imagePaths;
+    if (!lastClickedZone) return;
+
+    const zoneTitle = lastClickedZone;
+    const images = zoneImageMap[zoneTitle] || [];
+
     currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
     showCurrentImage();
 
     // Make sure title is always in sync with the current zone
-    modalTitle.textContent = formatZoneTitle(zoneObj.title);
+    modalTitle.textContent = formatZoneTitle(zoneTitle);
   }
 
   /**********************************************************
