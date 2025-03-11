@@ -218,6 +218,60 @@
     background-color: rgba(0, 0, 0, 0.8);
   }
 
+  /* SVG Highlight Styles - Added for cross-browser compatibility */
+  .zone-highlight {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .zone-highlight.active {
+    opacity: 0.6;
+    fill: rgba(255, 0, 0, 0.2); /* Red fill with transparency */
+    stroke: #ff0000;
+    stroke-width: 3px;
+  }
+
+  /* Explicitly style the polygon element */
+  polygon.zone-highlight {
+    fill-opacity: 0;
+    stroke-opacity: 0;
+  }
+
+  polygon.zone-highlight.active {
+    fill-opacity: 0.6;
+    stroke-opacity: 1;
+  }
+
+  .zone-highlight polygon {
+    stroke-width: 3px;
+  }
+
+  /* Zone label styling */
+  .zone-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: "Komikatitle Axis", "Bangers", "Impact", sans-serif;
+    font-size: 3rem;
+    font-weight: 900;
+    color: #ff0000;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.7), 0 0 5px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 2;
+    pointer-events: none;
+    width: 80%;
+  }
+
+  .zone-label.active {
+    opacity: 1;
+  }
+
   /* Responsive styles */
   @media (max-width: 768px) {
     .instruction-text {
@@ -267,6 +321,7 @@
       class="main-map"
     />
     <div class="zone-label"></div>
+    <div class="highlights-container"></div>
 
     <!-- Initial overlay with tap instructions -->
     <div class="initial-overlay">
@@ -419,6 +474,14 @@
     const initialOverlay = document.querySelector(".initial-overlay");
     const fullscreenView = document.querySelector(".fullscreen-view");
     const closeFullscreenButton = document.querySelector(".close-fullscreen");
+    const zoneLabel = document.querySelector(".zone-label");
+    const highlightsContainer = document.querySelector(".highlights-container");
+
+    // Flag to track if we're on mobile
+    const isMobile = window.innerWidth <= 768;
+
+    // Store all zones with their data
+    const allZones = [];
 
     // Define image paths with exact filenames from the repository
     const zoneImageMap = {
@@ -490,11 +553,24 @@
     // Parse coordinates from area elements
     function parseCoordinates() {
       areaCoordinates.length = 0; // Clear existing coordinates
+      allZones.length = 0; // Clear existing zones
 
       areas.forEach((area) => {
         const coords = area.getAttribute("coords").split(",").map(Number);
         const shape = area.getAttribute("shape");
         const title = area.getAttribute("title");
+
+        // Create zone object for internal use
+        if (zoneImageMap[title]) {
+          const zone = {
+            title: title,
+            coords: coords,
+            shape: shape,
+            imagePaths: zoneImageMap[title],
+            element: area,
+          };
+          allZones.push(zone);
+        }
 
         if (shape === "poly") {
           // Create an array of points
@@ -525,6 +601,160 @@
       });
 
       console.log("Parsed coordinates:", areaCoordinates);
+      console.log("Created zones:", allZones);
+
+      // Create SVG highlights after parsing coordinates
+      createAreaHighlights();
+      setupMapAreaInteraction();
+    }
+
+    // Function to create SVG highlights for map areas
+    function createAreaHighlights() {
+      // Clear existing highlights
+      if (highlightsContainer) {
+        highlightsContainer.innerHTML = "";
+      }
+
+      // Create SVG container for the highlights
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "map-highlights");
+      svg.style.position = "absolute";
+      svg.style.top = "0";
+      svg.style.left = "0";
+      svg.style.width = "100%";
+      svg.style.height = "100%";
+      svg.style.pointerEvents = "none"; // Make sure it doesn't interfere with clicks
+      highlightsContainer.appendChild(svg);
+
+      // Process each zone
+      allZones.forEach((zone, index) => {
+        if (zone.shape === "poly") {
+          // Create polygon highlight
+          const polygon = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "polygon"
+          );
+          polygon.setAttribute("class", `zone-highlight zone-${index}`);
+          polygon.setAttribute("data-zone", zone.title);
+
+          // Set SVG styling attributes explicitly
+          polygon.setAttribute("fill", "rgba(255, 0, 0, 0.2)");
+          polygon.setAttribute("stroke", "#ff0000");
+          polygon.setAttribute("stroke-width", "3");
+          polygon.setAttribute("fill-opacity", "0");
+          polygon.setAttribute("stroke-opacity", "0");
+
+          svg.appendChild(polygon);
+        }
+      });
+
+      // Update area highlights with current dimensions
+      updateAreaHighlights();
+    }
+
+    // Update area highlights based on current dimensions
+    function updateAreaHighlights() {
+      if (!mapImage || !mapImage.complete) return;
+
+      // Get current map dimensions
+      const mapWidth = mapImage.offsetWidth;
+      const mapHeight = mapImage.offsetHeight;
+
+      // Original map dimensions (SVG viewBox or natural size)
+      const originalWidth = mapImage.naturalWidth;
+      const originalHeight = mapImage.naturalHeight;
+
+      if (
+        mapWidth === 0 ||
+        mapHeight === 0 ||
+        originalWidth === 0 ||
+        originalHeight === 0
+      ) {
+        console.warn("Cannot update highlights: Invalid dimensions", {
+          mapWidth,
+          mapHeight,
+          originalWidth,
+          originalHeight,
+        });
+        return;
+      }
+
+      // Calculate scale factors
+      const scaleX = mapWidth / originalWidth;
+      const scaleY = mapHeight / originalHeight;
+
+      // Update each zone's polygon
+      allZones.forEach((zone, index) => {
+        if (zone.shape === "poly") {
+          const polygon = document.querySelector(
+            `.zone-highlight.zone-${index}`
+          );
+          if (!polygon) return;
+
+          // Scale coordinates
+          const scaledPoints = [];
+          for (let i = 0; i < zone.coords.length; i += 2) {
+            const x = zone.coords[i] * scaleX;
+            const y = zone.coords[i + 1] * scaleY;
+            scaledPoints.push(`${x},${y}`);
+          }
+
+          polygon.setAttribute("points", scaledPoints.join(" "));
+        }
+      });
+    }
+
+    // Set up hover interactions with map areas
+    function setupMapAreaInteraction() {
+      allZones.forEach((zone) => {
+        zone.element.addEventListener("mouseenter", () => {
+          if (!isMobile) {
+            zoneLabel.textContent = formatZoneTitle(zone.title);
+            zoneLabel.style.opacity = "1";
+            highlightZone(zone.title);
+          }
+        });
+
+        zone.element.addEventListener("mouseleave", () => {
+          if (!isMobile) {
+            zoneLabel.style.opacity = "0";
+            clearHighlights();
+          }
+        });
+
+        // For touch devices, we'll continue using the click/tap handling
+      });
+    }
+
+    // Function to highlight a specific zone
+    function highlightZone(title) {
+      // Clear all highlights first
+      clearHighlights();
+
+      // Find the zone index
+      const zoneIndex = allZones.findIndex((zone) => zone.title === title);
+      if (zoneIndex === -1) return;
+
+      // Highlight this zone
+      const highlight = document.querySelector(
+        `.zone-highlight.zone-${zoneIndex}`
+      );
+      if (highlight) {
+        highlight.classList.add("active");
+        // Set SVG attributes directly in addition to class
+        highlight.setAttribute("fill-opacity", "0.6");
+        highlight.setAttribute("stroke-opacity", "1");
+      }
+    }
+
+    // Function to clear all highlights
+    function clearHighlights() {
+      document.querySelectorAll(".zone-highlight").forEach((highlight) => {
+        highlight.classList.remove("active");
+        // Reset SVG attributes
+        highlight.setAttribute("fill-opacity", "0");
+        highlight.setAttribute("stroke-opacity", "0");
+      });
     }
 
     // Calculate scale ratio for the image
@@ -615,8 +845,27 @@
     // Initialize the coordinates on load
     parseCoordinates();
 
-    // Update coordinates when window resizes
-    window.addEventListener("resize", parseCoordinates);
+    // Check on load and resize
+    checkScreenSize();
+    window.addEventListener("resize", function () {
+      checkScreenSize();
+      // Recalculate highlights when window size changes
+      setTimeout(() => {
+        updateAreaHighlights();
+      }, 250);
+    });
+
+    // Update area highlights when map loads
+    mapImage.addEventListener("load", function () {
+      console.log(
+        "Map image loaded - dimensions:",
+        mapImage.offsetWidth,
+        "x",
+        mapImage.offsetHeight
+      );
+      parseCoordinates();
+      updateAreaHighlights();
+    });
 
     // Find which area was clicked based on coordinates
     function findClickedArea(x, y) {
@@ -1059,17 +1308,6 @@
       }
     }, 500);
 
-    // Show initial coordinates in console
-    mapImage.addEventListener("load", function () {
-      console.log(
-        "Map image loaded - dimensions:",
-        mapImage.offsetWidth,
-        "x",
-        mapImage.offsetHeight
-      );
-      parseCoordinates();
-    });
-
     // Load a mobile-optimized SVG if on small screens
     function checkScreenSize() {
       // If window width is less than 768px, we're on mobile
@@ -1086,10 +1324,6 @@
         // mapImage.src = "https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/City%20Map%20Mobile.svg";
       }
     }
-
-    // Check on load and resize
-    checkScreenSize();
-    window.addEventListener("resize", checkScreenSize);
 
     window.mapInitialized = true;
     console.log("Map initialized successfully");
