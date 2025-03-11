@@ -227,6 +227,16 @@
     transition: opacity 0.3s ease;
   }
 
+  .highlights-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 3;
+  }
+
   .zone-highlight.active {
     opacity: 0.6;
     fill: rgba(255, 0, 0, 0.2); /* Red fill with transparency */
@@ -525,6 +535,12 @@
     // Flag to track if we're on mobile
     const isMobile = window.innerWidth <= 768;
 
+    // Enable debug mode via URL parameter
+    const debugMode = window.location.search.includes("debug=true");
+    if (debugMode) {
+      console.log("Debug mode enabled - logging highlight details");
+    }
+
     // Store all zones with their data
     const allZones = [];
 
@@ -660,9 +676,15 @@
         highlightsContainer.innerHTML = "";
       }
 
+      // Get current map dimensions
+      const mapWidth = mapImage.offsetWidth;
+      const mapHeight = mapImage.offsetHeight;
+
       // Create SVG container for the highlights
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.setAttribute("class", "map-highlights");
+      svg.setAttribute("width", mapWidth);
+      svg.setAttribute("height", mapHeight);
       svg.style.position = "absolute";
       svg.style.top = "0";
       svg.style.left = "0";
@@ -724,9 +746,27 @@
         return;
       }
 
-      // Calculate scale factors
+      // Check for SVG and update its dimensions
+      const svg = document.querySelector(".map-highlights");
+      if (svg) {
+        svg.setAttribute("width", mapWidth);
+        svg.setAttribute("height", mapHeight);
+      }
+
+      // Calculate scale factors - use the minimum scale to maintain aspect ratio
       const scaleX = mapWidth / originalWidth;
       const scaleY = mapHeight / originalHeight;
+
+      if (debugMode) {
+        console.log("Updating area highlights with scale factors:", {
+          scaleX,
+          scaleY,
+          mapWidth,
+          mapHeight,
+          originalWidth,
+          originalHeight,
+        });
+      }
 
       // Update each zone's polygon
       allZones.forEach((zone, index) => {
@@ -893,11 +933,33 @@
     // Check on load and resize
     checkScreenSize();
     window.addEventListener("resize", function () {
-      checkScreenSize();
-      // Recalculate highlights when window size changes
-      setTimeout(() => {
-        updateAreaHighlights();
-      }, 250);
+      // Update mobile flag on resize
+      const wasMobile = isMobile;
+      const newIsMobile = window.innerWidth <= 768;
+
+      // Only do a full refresh if we're switching between mobile/desktop
+      if (wasMobile !== newIsMobile) {
+        location.reload(); // Simple refresh to update the UI correctly
+      } else {
+        checkScreenSize();
+
+        // Immediately update for smoother resizing
+        if (!newIsMobile) {
+          createAreaHighlights();
+        }
+
+        // Also do a timed update after resize ends
+        setTimeout(() => {
+          updateAreaHighlights();
+          if (debugMode) {
+            console.log("Window resized, dimensions:", {
+              windowWidth: window.innerWidth,
+              mapWidth: mapImage.offsetWidth,
+              mapHeight: mapImage.offsetHeight,
+            });
+          }
+        }, 100);
+      }
     });
 
     // Update area highlights when map loads
@@ -1366,5 +1428,123 @@
 
     window.mapInitialized = true;
     console.log("Map initialized successfully");
+
+    // Add click event to each zone button
+    const zoneButtons = document.querySelectorAll(".mobile-zone-button");
+    zoneButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const zoneSlug = button.getAttribute("data-zone");
+        selectZone(zoneSlug);
+
+        // Update highlighted area
+        updateActiveZoneHighlight(zoneSlug);
+
+        if (debugMode) {
+          console.log("Zone selected:", zoneSlug);
+        }
+      });
+    });
+
+    // Function to select a zone
+    function selectZone(zoneSlug) {
+      // Remove active class from all buttons
+      zoneButtons.forEach((button) => {
+        button.classList.remove("active");
+      });
+
+      // Add active class to selected button
+      const selectedButton = document.querySelector(
+        `.mobile-zone-button[data-zone="${zoneSlug}"]`
+      );
+      if (selectedButton) {
+        selectedButton.classList.add("active");
+      }
+
+      // Update highlighted area
+      updateActiveZoneHighlight(zoneSlug);
+
+      // Additional UI updates
+      const zoneTitle = document.querySelector(".zone-title");
+      const zoneDescription = document.querySelector(".zone-description");
+      const learnMoreLink = document.querySelector(".zone-learn-more a");
+
+      // Update zone information
+      if (zoneData[zoneSlug]) {
+        zoneTitle.textContent = zoneData[zoneSlug].title;
+        zoneDescription.textContent = zoneData[zoneSlug].description;
+        if (learnMoreLink) {
+          learnMoreLink.href = zoneData[zoneSlug].link;
+        }
+      }
+    }
+
+    // Function to update the active zone highlight
+    function updateActiveZoneHighlight(zoneSlug) {
+      // Remove active class from all highlights
+      const highlights = document.querySelectorAll(".zone-highlight");
+      highlights.forEach((highlight) => {
+        highlight.classList.remove("active");
+      });
+
+      // Add active class to selected highlight
+      const selectedHighlight = document.querySelector(
+        `.zone-highlight[data-zone="${zoneSlug}"]`
+      );
+      if (selectedHighlight) {
+        selectedHighlight.classList.add("active");
+
+        if (debugMode) {
+          console.log("Highlight activated for zone:", zoneSlug);
+          console.log("Highlight element:", selectedHighlight);
+          console.log("Highlight position:", {
+            x: selectedHighlight.getBoundingClientRect().left,
+            y: selectedHighlight.getBoundingClientRect().top,
+            width: selectedHighlight.getBoundingClientRect().width,
+            height: selectedHighlight.getBoundingClientRect().height,
+          });
+        }
+      } else if (debugMode) {
+        console.warn("No highlight found for zone:", zoneSlug);
+      }
+    }
+
+    // Load the map and ensure it's completely loaded before initializing highlights
+    if (mapImage) {
+      // Check if map is already loaded
+      if (mapImage.complete) {
+        initializeMapHighlights();
+        if (debugMode) {
+          console.log(
+            "Map was already loaded, highlights initialized immediately"
+          );
+        }
+      } else {
+        // Wait for map to load before initializing highlights
+        mapImage.onload = function () {
+          initializeMapHighlights();
+          if (debugMode) {
+            console.log("Map loaded, highlights initialized after load");
+          }
+        };
+
+        // Error handling
+        mapImage.onerror = function () {
+          console.error("Error loading map image");
+        };
+      }
+    } else {
+      console.error("Map image element not found");
+    }
+
+    // Function to initialize map highlights
+    function initializeMapHighlights() {
+      createAreaHighlights();
+      // Initialize with first zone by default, if any zones exist
+      const firstZoneButton = document.querySelector(".zone-button");
+      if (firstZoneButton) {
+        const firstZoneSlug = firstZoneButton.getAttribute("data-zone");
+        selectZone(firstZoneSlug);
+      }
+    }
   });
 </script>
