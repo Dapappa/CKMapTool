@@ -1,0 +1,61 @@
+<!-- CKMapTool Loader for Webflow - Copy this to your Webflow page in a Custom Code embed -->
+
+<!-- Load external CSS file -->
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/styles.css"
+/>
+
+<!-- Load external JavaScript file -->
+<script src="https://cdn.jsdelivr.net/gh/Dapappa/CKMapTool/script.js"></script>
+
+<!-- Map container structure -->
+<div class="map-container">
+  <div class="map-wrapper">
+    <img src="YOUR_MAP_IMAGE_URL" class="main-map" usemap="#image-map" />
+    <map name="image-map">
+      <!-- Your map area definitions go here -->
+      <!-- Example: -->
+      <!-- <area target="" alt="Zone1" title="Zone1" coords="100,100,200,200,150,300" shape="poly"> -->
+    </map>
+    <div class="zone-label"></div>
+    <div class="highlights-container"></div>
+  </div>
+  <div class="initial-overlay">
+    <div class="instruction-text">Tap or click a region to explore</div>
+  </div>
+</div>
+
+<!-- Modal for displaying zone information -->
+<div class="zone-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title"></h2>
+      <button class="close-button">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="slider-container">
+        <!-- Images will be loaded here dynamically -->
+      </div>
+      <button class="prev-button">❮</button>
+      <button class="next-button">❯</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fullscreen view for images -->
+<div class="fullscreen-view">
+  <div class="fullscreen-image-container">
+    <!-- Fullscreen image will be loaded here -->
+  </div>
+  <button class="close-fullscreen">×</button>
+</div>
+
+<!-- Define your zone image map - customize this with your zones and images -->
+<script>
+  const zoneImageMap = {
+    Zone1: ["image1.jpg", "image2.jpg"],
+    Zone2: ["image3.jpg", "image4.jpg"],
+    // Add all your zones here
+  };
+</script>

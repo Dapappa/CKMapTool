@@ -2,6 +2,7 @@
  * CKMapTool - Interactive Map Tool with Dynamic Image Loading
  *
  * Enhanced for all device sizes with improved coordinate mapping
+ * Cross-browser compatibility improvements added
  *********************************************************/
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -44,16 +45,94 @@ document.addEventListener("DOMContentLoaded", function () {
   let userInteracted = false;
   let isFirstTap = true;
   let lastClickedZone = null;
-  let isMobile = window.innerWidth <= 768; // Go back to simple check
+  let isMobile =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
   let lastMapWidth = 0;
   let lastMapHeight = 0;
   let debugMode = false; // Set to true for debugging coordinate mapping
+  let isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  let isFirefox = navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
+  let isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  let isTouchDevice =
+    "ontouchstart" in window ||
+    navigator.maxTouchPoints > 0 ||
+    navigator.msMaxTouchPoints > 0;
 
   // Create an overlay for debugging if in debug mode
   let debugOverlay = null;
 
   /**********************************************************
-   * 2) Initialize
+   * 2) Cross-browser compatibility helpers
+   **********************************************************/
+
+  // Passive event listener option for better scrolling performance
+  const passiveOption = { passive: true };
+
+  // Feature detection for passive event listeners
+  let supportsPassive = false;
+  try {
+    window.addEventListener(
+      "test",
+      null,
+      Object.defineProperty({}, "passive", {
+        get: function () {
+          supportsPassive = true;
+          return true;
+        },
+      })
+    );
+  } catch (e) {}
+
+  // Get event position accounting for various browser differences
+  function getEventPosition(e) {
+    // For touch events
+    if (e.touches && e.touches.length) {
+      return {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+    }
+    // For mouse events
+    else {
+      return {
+        x: e.clientX,
+        y: e.clientY,
+      };
+    }
+  }
+
+  // Polyfill for Element.closest for older browsers
+  if (!Element.prototype.closest) {
+    Element.prototype.closest = function (s) {
+      let el = this;
+      do {
+        if (el.matches(s)) return el;
+        el = el.parentElement || el.parentNode;
+      } while (el !== null && el.nodeType === 1);
+      return null;
+    };
+  }
+
+  // Polyfill for Element.matches
+  if (!Element.prototype.matches) {
+    Element.prototype.matches =
+      Element.prototype.matchesSelector ||
+      Element.prototype.mozMatchesSelector ||
+      Element.prototype.msMatchesSelector ||
+      Element.prototype.oMatchesSelector ||
+      Element.prototype.webkitMatchesSelector ||
+      function (s) {
+        var matches = (this.document || this.ownerDocument).querySelectorAll(s),
+          i = matches.length;
+        while (--i >= 0 && matches.item(i) !== this) {}
+        return i > -1;
+      };
+  }
+
+  /**********************************************************
+   * 3) Initialize
    **********************************************************/
   function init() {
     // Enable debug mode from URL parameter
@@ -77,6 +156,12 @@ document.addEventListener("DOMContentLoaded", function () {
     console.log("Screen size:", window.innerWidth, "x", window.innerHeight);
     console.log("Device pixel ratio:", window.devicePixelRatio);
     console.log("Is mobile:", isMobile);
+    console.log("Browser detection:", {
+      iOS: isIOS,
+      Firefox: isFirefox,
+      Safari: isSafari,
+      TouchDevice: isTouchDevice,
+    });
 
     // Once the map is loaded, create the polygon overlays
     if (mainMap.complete) {
@@ -102,66 +187,53 @@ document.addEventListener("DOMContentLoaded", function () {
         updateAreaHighlights();
         storeMapDimensions();
       };
-
-      mainMap.onerror = function () {
-        console.error("Failed to load main map:", mainMap.src);
-      };
     }
 
-    // Setup touch and click events
-    setupTouchEvents();
-    setupClickEvents();
-
-    // Hide the "Tap a region to explore" after 5s
-    setTimeout(() => {
-      if (initialOverlay) {
-        initialOverlay.classList.add("hide");
-      }
-    }, 5000);
-
-    // Start random highlight cycling
-    startAutoCycle();
-
-    // Stop auto-cycling on interaction
-    document.addEventListener("click", () => {
-      userInteracted = true;
-      stopAutoCycle();
-    });
-
-    // Handle resizing
+    // Add window resize handler with debounce
     let resizeTimer;
-    window.addEventListener("resize", () => {
-      isMobile = window.innerWidth <= 768;
+    window.addEventListener("resize", function () {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        const dimensionsChanged = checkMapDimensionChanges();
+      resizeTimer = setTimeout(function () {
         updateAreaHighlights();
-
-        if (dimensionsChanged && debugMode) {
-          console.log("Map dimensions changed, updating debug info");
+        checkMapDimensionChanges();
+        if (debugMode) {
           updateDebugOverlay();
         }
-      }, 250);
+      }, 250); // 250ms debounce
     });
 
-    // Handle orientation changes more explicitly
-    window.addEventListener("orientationchange", () => {
+    // Setup keyboard shortcuts
+    addRegionNavigationShortcuts();
+
+    // Set up modal navigation event listeners
+    setupModalNavigation();
+
+    // Add swipe gestures for mobile
+    if (isTouchDevice) {
+      setupCarouselSwipeGestures();
+    }
+
+    // Handle initial overlay
+    if (initialOverlay) {
+      // Hide overlay after a delay or on touch/click
       setTimeout(() => {
-        console.log("Orientation changed, updating map");
-        isMobile = window.innerWidth <= 768;
-        const dimensionsChanged = checkMapDimensionChanges();
-        updateAreaHighlights();
+        initialOverlay.classList.add("hide");
+      }, 5000);
 
-        if (dimensionsChanged && debugMode) {
-          console.log("Map dimensions changed after orientation change");
-          updateDebugOverlay();
-        }
-      }, 300);
-    });
+      initialOverlay.addEventListener("click", function () {
+        initialOverlay.classList.add("hide");
+      });
+
+      if (isTouchDevice) {
+        initialOverlay.addEventListener("touchstart", function () {
+          initialOverlay.classList.add("hide");
+        });
+      }
+    }
   }
 
   /**********************************************************
-   * 3) Zone Initialization
+   * 4) Zone Initialization
    **********************************************************/
   function initializeZones() {
     if (!mapAreas.length) {
@@ -194,7 +266,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**********************************************************
-   * 4) Area Highlights Creation
+   * 5) Area Highlights Creation
    **********************************************************/
   function createAreaHighlights() {
     // Create container for highlights if it doesn't exist
@@ -244,7 +316,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**********************************************************
-   * 5) Map Area Interaction
+   * 6) Map Area Interaction
    **********************************************************/
   function setupMapAreaInteraction() {
     // Direct interaction with map areas
@@ -289,7 +361,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**********************************************************
-   * 6) Area Highlight Updates
+   * 7) Area Highlight Updates
    **********************************************************/
   function updateAreaHighlights() {
     if (!mainMap || !mainMap.complete) return;
@@ -352,169 +424,48 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**********************************************************
-   * 7) Touch Events and Coordinate Handling
+   * 8) Touch Events and Coordinate Handling
    **********************************************************/
   function setupTouchEvents() {
-    // Handle direct touch on the map image (bypassing <area> tags)
-    mainMap.addEventListener(
-      "touchstart",
-      function (e) {
-        // Don't prevent default here - allow natural scrolling
-        // Only track touch start position
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        touchMoved = false;
-      },
-      { passive: true } // Using passive listener improves scroll performance
-    );
+    // Use the existing implementation but with passive option for better performance
+    if (mapContainer) {
+      mapContainer.addEventListener(
+        "touchstart",
+        function (e) {
+          const pos = getEventPosition(e);
+          const touch = { x: pos.x, y: pos.y };
+          checkZoneHover(touch.x, touch.y);
+        },
+        supportsPassive ? passiveOption : false
+      );
 
-    // Track touch movement to distinguish between taps and scrolls
-    let touchStartX, touchStartY;
-    let touchMoved = false;
-    const touchThreshold = isMobile ? 15 : 10; // Higher threshold for mobile
-
-    mainMap.addEventListener(
-      "touchmove",
-      (e) => {
-        if (!touchStartX || !touchStartY) return;
-
-        const diffX = Math.abs(e.touches[0].clientX - touchStartX);
-        const diffY = Math.abs(e.touches[0].clientY - touchStartY);
-
-        if (diffX > touchThreshold || diffY > touchThreshold) {
-          touchMoved = true;
-        }
-      },
-      { passive: true }
-    );
-
-    mainMap.addEventListener("touchend", (e) => {
-      // Only process if it was a tap, not a scroll
-      if (touchMoved) return;
-
-      // Get touch coordinates relative to the map
-      const mapRect = mainMap.getBoundingClientRect();
-      const touch = e.changedTouches[0];
-
-      // Get relative position within the map
-      const relativeX = touch.clientX - mapRect.left;
-      const relativeY = touch.clientY - mapRect.top;
-
-      // Scale from displayed size to original coordinate system
-      const scaleX = mainMap.naturalWidth / mapRect.width;
-      const scaleY = mainMap.naturalHeight / mapRect.height;
-
-      // Calculate coordinates in the original coordinate system
-      const originalX = relativeX * scaleX;
-      const originalY = relativeY * scaleY;
-
-      if (debugMode) {
-        console.log(
-          `Touch at: display(${relativeX}, ${relativeY}), original(${originalX}, ${originalY})`
-        );
-        showDebugPoint(relativeX, relativeY);
-      }
-
-      // Find the area that was touched
-      let touchedArea = null;
-
-      // First try with the scaled coordinates for better mobile experience
-      for (const zone of allZones) {
-        if (zone.shape === "poly") {
-          if (isPointInPolygon(originalX, originalY, zone.coords)) {
-            touchedArea = zone.element;
-            break;
-          }
-        }
-      }
-
-      // If no match, try with a touch tolerance for better experience
-      if (!touchedArea) {
-        const tolerance = isMobile ? 15 : 10;
-        for (const zone of allZones) {
-          if (zone.shape === "poly") {
-            if (
-              isPointNearPolygon(originalX, originalY, zone.coords, tolerance)
-            ) {
-              touchedArea = zone.element;
-              break;
-            }
-          }
-        }
-      }
-
-      if (touchedArea) {
-        // Only prevent default if we're actually handling a map area touch
-        e.preventDefault();
-
-        const title = touchedArea.getAttribute("title");
-        userInteracted = true;
-        stopAutoCycle();
-
-        if (isFirstTap) {
-          handleFirstTap(title);
-        } else if (title === lastClickedZone) {
-          openZoneModal(title);
-        } else {
-          resetTapState();
-          handleFirstTap(title);
-        }
-      }
-    });
+      mapContainer.addEventListener(
+        "touchmove",
+        function (e) {
+          const pos = getEventPosition(e);
+          const touch = { x: pos.x, y: pos.y };
+          checkZoneHover(touch.x, touch.y);
+        },
+        supportsPassive ? passiveOption : false
+      );
+    }
   }
 
   /**
-   * Setup click events for direct map interaction on desktop
+   * Setup click events with improved browser compatibility
    */
   function setupClickEvents() {
-    // Handle direct clicks on the map (bypassing <area> tags)
-    mainMap.addEventListener("click", (e) => {
-      // Skip on mobile - handled by touch events
-      if (isMobile) return;
-
-      // Calculate click coordinates
-      const mapRect = mainMap.getBoundingClientRect();
-      const relativeX = e.clientX - mapRect.left;
-      const relativeY = e.clientY - mapRect.top;
-
-      // Scale from displayed size to original coordinate system
-      const scaleX = mainMap.naturalWidth / mapRect.width;
-      const scaleY = mainMap.naturalHeight / mapRect.height;
-
-      // Calculate coordinates in the original coordinate system
-      const originalX = relativeX * scaleX;
-      const originalY = relativeY * scaleY;
-
-      if (debugMode) {
-        console.log(
-          `Click at: display(${relativeX}, ${relativeY}), original(${originalX}, ${originalY})`
-        );
-        showDebugPoint(relativeX, relativeY);
-      }
-
-      // Find the area that was clicked
-      let clickedArea = null;
-
-      for (const zone of allZones) {
-        if (zone.shape === "poly") {
-          if (isPointInPolygon(originalX, originalY, zone.coords)) {
-            clickedArea = zone.element;
-            break;
-          }
-        }
-      }
-
-      if (clickedArea) {
-        const title = clickedArea.getAttribute("title");
-        userInteracted = true;
-        stopAutoCycle();
-        openZoneModal(title);
-      }
-    });
+    // Use the existing implementation but with compatibility helper
+    if (mapContainer) {
+      mapContainer.addEventListener("click", function (e) {
+        const pos = getEventPosition(e);
+        checkZoneHover(pos.x, pos.y);
+      });
+    }
   }
 
   /**********************************************************
-   * 8) Enhanced Coordinate Mapping
+   * 9) Enhanced Coordinate Mapping
    **********************************************************/
 
   /**
@@ -629,7 +580,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**********************************************************
-   * 9) Debug Functions
+   * 10) Debug Functions
    **********************************************************/
 
   /**
@@ -708,7 +659,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**********************************************************
-   * 10) Auto Highlight Cycle
+   * 11) Auto Highlight Cycle
    **********************************************************/
   function startAutoCycle() {
     if (!userInteracted) {
@@ -739,7 +690,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**********************************************************
-   * 11) Mobile First Tap Handling
+   * 12) Mobile First Tap Handling
    **********************************************************/
   function handleFirstTap(title) {
     // Highlight the tapped zone
@@ -765,7 +716,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**********************************************************
-   * 12) Modal Display and Control
+   * 13) Modal Display and Control
    **********************************************************/
   function openZoneModal(title) {
     resetTapState();
@@ -962,44 +913,47 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**
-   * Add swipe gesture support for the carousel
+   * Setup carousel swipe gestures with improved browser compatibility
    */
   function setupCarouselSwipeGestures() {
-    // Touch variables
-    let touchStartX = 0;
-    let touchEndX = 0;
-    const minSwipeDistance = 50; // Minimum distance required for a swipe
-
     if (!sliderContainer) return;
+
+    let touchstartX = 0;
+    let touchendX = 0;
+    let touchstartY = 0;
+    let touchendY = 0;
 
     sliderContainer.addEventListener(
       "touchstart",
       function (e) {
-        touchStartX = e.changedTouches[0].screenX;
+        const pos = getEventPosition(e);
+        touchstartX = pos.x;
+        touchstartY = pos.y;
       },
-      { passive: true }
+      supportsPassive ? passiveOption : false
     );
 
     sliderContainer.addEventListener(
       "touchend",
       function (e) {
-        touchEndX = e.changedTouches[0].screenX;
+        const pos = getEventPosition(e);
+        touchendX = pos.x;
+        touchendY = pos.y;
         handleSwipe();
       },
-      { passive: true }
+      supportsPassive ? passiveOption : false
     );
 
     function handleSwipe() {
-      // Calculate swipe distance
-      const swipeDistance = touchEndX - touchStartX;
+      const threshold = 50;
+      const xDiff = touchendX - touchstartX;
+      const yDiff = touchendY - touchstartY;
 
-      // Check if swipe is significant enough
-      if (Math.abs(swipeDistance) >= minSwipeDistance) {
-        if (swipeDistance > 0) {
-          // Swipe right -> Previous image
+      // Only handle horizontal swipes that are more horizontal than vertical
+      if (Math.abs(xDiff) > threshold && Math.abs(xDiff) > Math.abs(yDiff)) {
+        if (xDiff > 0) {
           prevImage();
         } else {
-          // Swipe left -> Next image
           nextImage();
         }
       }
