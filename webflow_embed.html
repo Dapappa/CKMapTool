@@ -859,8 +859,45 @@
       });
     }
 
-    // Set up hover interactions with map areas
+    // Explicit cross-browser SVG sizing fix
+    function fixSvgScaling() {
+      // Set explicit dimensions for the container to match SVG aspect ratio
+      const svgAspectRatio = 1224 / 792; // From SVG viewBox (height/width)
+
+      if (mapWrapper) {
+        // Force dimensions based on SVG aspect ratio
+        const containerWidth = mapWrapper.clientWidth;
+        mapWrapper.style.height = containerWidth * svgAspectRatio + "px";
+
+        // Explicitly set map image dimensions to match wrapper
+        if (mapImage) {
+          mapImage.style.width = "100%";
+          mapImage.style.height = "100%";
+          mapImage.style.objectFit = "fill"; // Ensure image fills the container
+        }
+
+        if (debugMode) {
+          console.log("Applied fixed dimensions to map wrapper:", {
+            width: containerWidth,
+            height: mapWrapper.style.height,
+            aspectRatio: svgAspectRatio,
+          });
+        }
+      }
+
+      // Force browser to recognize new dimensions
+      if (mapImage) {
+        // Trigger reflow to ensure browser recalculates layout
+        void mapImage.offsetHeight;
+      }
+    }
+
+    // Set up hover interactions with map areas - revised for cross-browser compatibility
     function setupMapAreaInteraction() {
+      // For better hover detection, add mousemove tracking on the entire map
+      mapWrapper.addEventListener("mousemove", handleMapMouseMove);
+
+      // Still use the area elements for fallback
       allZones.forEach((zone) => {
         zone.element.addEventListener("mouseenter", () => {
           if (!isMobile) {
@@ -876,9 +913,82 @@
             clearHighlights();
           }
         });
-
-        // For touch devices, we'll continue using the click/tap handling
       });
+    }
+
+    // Handle mouse movement over the map to detect zones
+    function handleMapMouseMove(e) {
+      if (isMobile) return; // Skip on mobile devices
+
+      // Get pointer coordinates relative to the map
+      const rect = mapImage.getBoundingClientRect();
+      const pointerX = e.clientX - rect.left;
+      const pointerY = e.clientY - rect.top;
+
+      // Convert to SVG coordinates
+      const svgX = (pointerX / rect.width) * 792; // Convert to SVG viewBox width
+      const svgY = (pointerY / rect.height) * 1224; // Convert to SVG viewBox height
+
+      // Find zone under pointer
+      const hoveredZone = findZoneAtCoordinates(svgX, svgY);
+
+      if (hoveredZone) {
+        if (debugMode) {
+          console.log(
+            `Hovering over ${hoveredZone.title} at SVG coords ${svgX.toFixed(
+              1
+            )},${svgY.toFixed(1)}`
+          );
+        }
+
+        // Show label and highlight
+        zoneLabel.textContent = formatZoneTitle(hoveredZone.title);
+        zoneLabel.style.opacity = "1";
+        highlightZone(hoveredZone.title);
+      } else {
+        // Clear if not hovering over any zone
+        zoneLabel.style.opacity = "0";
+        clearHighlights();
+      }
+    }
+
+    // Find which zone contains the given SVG coordinates
+    function findZoneAtCoordinates(svgX, svgY) {
+      for (const zone of allZones) {
+        if (zone.shape === "poly") {
+          if (isPointInSVGPoly({ x: svgX, y: svgY }, zone.coords)) {
+            return zone;
+          }
+        }
+      }
+      return null;
+    }
+
+    // Check if a point is inside a polygon using SVG coordinates
+    function isPointInSVGPoly(point, coords) {
+      const vertices = [];
+
+      // Convert coord array to vertices
+      for (let i = 0; i < coords.length; i += 2) {
+        vertices.push({ x: coords[i], y: coords[i + 1] });
+      }
+
+      // Ray casting algorithm in SVG space
+      let inside = false;
+      for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+        const xi = vertices[i].x,
+          yi = vertices[i].y;
+        const xj = vertices[j].x,
+          yj = vertices[j].y;
+
+        const intersect =
+          yi > point.y !== yj > point.y &&
+          point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
+
+        if (intersect) inside = !inside;
+      }
+
+      return inside;
     }
 
     // Function to highlight a specific zone
@@ -1095,43 +1205,515 @@
       }
     }
 
-    // Load the map and ensure it's completely loaded before initializing highlights
-    if (mapImage) {
-      // Check if map is already loaded
-      if (mapImage.complete) {
-        initializeMapHighlights();
-        if (debugMode) {
-          console.log(
-            "Map was already loaded, highlights initialized immediately"
-          );
-        }
-      } else {
-        // Wait for map to load before initializing highlights
-        mapImage.onload = function () {
-          initializeMapHighlights();
-          if (debugMode) {
-            console.log("Map loaded, highlights initialized after load");
-          }
-        };
+    // Improved map loading with retry logic
+    function loadMapAndInitialize() {
+      if (!mapImage) {
+        console.error("Map image element not found");
+        return;
+      }
 
-        // Error handling
+      // Apply fixed scaling before loading
+      fixSvgScaling();
+
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      function initializeOrRetry() {
+        // Check natural dimensions to see if SVG is truly loaded
+        if (mapImage.complete && mapImage.offsetWidth > 0) {
+          // Force SVG scaling again to ensure dimensions are correct
+          fixSvgScaling();
+
+          // Force a small delay to ensure SVG is fully rendered
+          setTimeout(() => {
+            // Initialize map highlights
+            initializeMapHighlights();
+
+            // Update highlights after a brief delay to ensure DOM is ready
+            setTimeout(() => {
+              updateAreaHighlights();
+
+              // Add a third highlight update after everything should be stable
+              setTimeout(updateAreaHighlights, 500);
+
+              if (debugMode) {
+                console.log("Map fully loaded and rendered, dimensions:", {
+                  naturalWidth: mapImage.naturalWidth,
+                  naturalHeight: mapImage.naturalHeight,
+                  offsetWidth: mapImage.offsetWidth,
+                  offsetHeight: mapImage.offsetHeight,
+                  wrapper: {
+                    width: mapWrapper.offsetWidth,
+                    height: mapWrapper.offsetHeight,
+                  },
+                });
+              }
+            }, 100);
+          }, 50);
+        } else if (retryCount < maxRetries) {
+          retryCount++;
+          if (debugMode) {
+            console.log(
+              `Map not fully loaded, retrying (${retryCount}/${maxRetries})`
+            );
+          }
+          setTimeout(initializeOrRetry, 200);
+        } else {
+          console.error("Failed to fully load map after retries");
+        }
+      }
+
+      // If image is already complete
+      if (mapImage.complete) {
+        initializeOrRetry();
+      } else {
+        // Set up load and error handling
+        mapImage.onload = initializeOrRetry;
         mapImage.onerror = function () {
           console.error("Error loading map image");
         };
       }
-    } else {
-      console.error("Map image element not found");
+    }
+
+    // Window resize handler with improved debouncing and forced redraw
+    let resizeTimeout = null;
+    window.addEventListener("resize", function () {
+      // Clear any pending resize handlers
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+
+      // Update mobile flag on resize
+      const wasMobile = isMobile;
+      const newIsMobile = window.innerWidth <= 768;
+
+      // Only do a full refresh if we're switching between mobile/desktop
+      if (wasMobile !== newIsMobile) {
+        if (debugMode) {
+          console.log("Mode switch detected, reloading page");
+        }
+        location.reload(); // Simple refresh to update the UI correctly
+      } else {
+        // Apply immediate resize fixes
+        checkScreenSize();
+        fixSvgScaling();
+
+        // Set delayed update for smoother performance
+        resizeTimeout = setTimeout(() => {
+          // Force recreation of SVG highlights
+          createAreaHighlights();
+
+          // Additional delay for final position updates
+          setTimeout(() => {
+            updateAreaHighlights();
+            if (debugMode) {
+              console.log("Window resize complete, dimensions:", {
+                windowWidth: window.innerWidth,
+                mapWidth: mapImage.offsetWidth,
+                mapHeight: mapImage.offsetHeight,
+                containerWidth: mapWrapper.offsetWidth,
+                containerHeight: mapWrapper.offsetHeight,
+              });
+            }
+          }, 100);
+        }, 100);
+      }
+    });
+
+    // Load a mobile-optimized SVG if on small screens
+    function checkScreenSize() {
+      // We're using the same SVG for both mobile and desktop
+      // Just checking if we're on mobile for other UI adjustments
+      const isMobileView = window.innerWidth < 768;
+
+      if (isMobileView) {
+        console.log("Mobile view detected - using responsive layout");
+      }
+
+      // Always apply SVG scaling when screen size is checked
+      fixSvgScaling();
     }
 
     // Function to initialize map highlights
     function initializeMapHighlights() {
       createAreaHighlights();
+
       // Initialize with first zone by default, if any zones exist
-      const firstZoneButton = document.querySelector(".zone-button");
+      // First check for specific button selectors
+      const firstZoneButton =
+        document.querySelector(".zone-button") ||
+        document.querySelector(".mobile-zone-button");
+
       if (firstZoneButton) {
         const firstZoneSlug = firstZoneButton.getAttribute("data-zone");
-        selectZone(firstZoneSlug);
+        if (firstZoneSlug) {
+          if (debugMode) {
+            console.log("Initializing with first zone:", firstZoneSlug);
+          }
+          selectZone(firstZoneSlug);
+        }
+      } else if (allZones.length > 0) {
+        // Fallback to first zone in our array if no buttons found
+        if (debugMode) {
+          console.log(
+            "No zone buttons found, using first zone from array:",
+            allZones[0].title
+          );
+        }
+        selectZone(allZones[0].title);
       }
     }
+
+    // Handle direct click on the map image
+    mapImage.addEventListener("click", function (e) {
+      e.preventDefault();
+
+      // Get click coordinates relative to the image
+      const rect = mapImage.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      if (debugMode) {
+        console.log(`Clicked at screen coords: ${clickX}, ${clickY}`);
+      }
+
+      // Find which area was clicked
+      const clickedArea = findClickedArea(clickX, clickY);
+
+      if (clickedArea) {
+        if (debugMode) {
+          console.log("Clicked on area:", clickedArea.title);
+        }
+        // Remove the initial overlay after a click
+        fadeOutOverlay();
+        // Now show the modal with the appropriate images
+        showZoneModal(clickedArea.title);
+      } else {
+        if (debugMode) {
+          console.log("No area clicked");
+        }
+      }
+    });
+
+    // Function to fade out the initial overlay
+    function fadeOutOverlay() {
+      if (initialOverlay) {
+        initialOverlay.classList.add("fade-out");
+      }
+    }
+
+    // Automatically fade out the initial overlay after 5 seconds
+    setTimeout(fadeOutOverlay, 5000);
+
+    // Function to show the zone modal with images
+    function showZoneModal(zoneTitle) {
+      // Set modal title
+      document.querySelector(".modal-title").textContent =
+        formatZoneTitle(zoneTitle);
+
+      // Clear previous images
+      const sliderContainer = document.querySelector(".slider-container");
+      sliderContainer.innerHTML = "";
+
+      // Add images if available for this zone
+      if (zoneImageMap[zoneTitle]) {
+        const images = zoneImageMap[zoneTitle];
+
+        // Only proceed if we have images
+        if (images && images.length > 0) {
+          // Add first image
+          const img = document.createElement("img");
+          const imageSrc = images[0];
+
+          // Set these attributes before setting src to avoid FOUC (Flash of Unstyled Content)
+          img.alt = formatZoneTitle(zoneTitle);
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          // Show a loading indicator while the image loads
+          sliderContainer.innerHTML =
+            '<div style="text-align: center; padding: 20px;">Loading image...</div>';
+
+          // Preload the image before showing
+          const preloadImg = new Image();
+          preloadImg.onload = function () {
+            // Replace loading indicator with actual image once loaded
+            sliderContainer.innerHTML = "";
+            img.src = imageSrc;
+            sliderContainer.appendChild(img);
+            console.log("✅ Image loaded successfully:", imageSrc);
+
+            // Add click event to show fullscreen
+            img.addEventListener("click", function () {
+              showFullscreen(imageSrc, zoneTitle);
+            });
+          };
+
+          preloadImg.onerror = function () {
+            console.error("❌ Failed to load image:", imageSrc);
+            sliderContainer.innerHTML = "";
+            img.src =
+              "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+            sliderContainer.appendChild(img);
+          };
+
+          // Start loading the image
+          preloadImg.src = imageSrc;
+
+          // Store current image index and zone info
+          sliderContainer.dataset.currentIndex = "0";
+          sliderContainer.dataset.zoneTitle = zoneTitle;
+
+          // Show/hide navigation buttons based on number of images
+          const prevButton = document.querySelector(".prev-button");
+          const nextButton = document.querySelector(".next-button");
+
+          if (images.length > 1) {
+            prevButton.style.display = "block";
+            nextButton.style.display = "block";
+          } else {
+            prevButton.style.display = "none";
+            nextButton.style.display = "none";
+          }
+        }
+      }
+
+      // Show modal with a slight delay to ensure proper rendering
+      setTimeout(() => {
+        zoneModal.classList.add("active");
+      }, 50);
+    }
+
+    // Function to show fullscreen image
+    function showFullscreen(src, title) {
+      const container = document.querySelector(".fullscreen-image-container");
+      container.innerHTML = "";
+
+      // Create new image
+      const img = document.createElement("img");
+
+      // Show loading indicator
+      container.innerHTML =
+        '<div style="color: white; text-align: center; font-size: 18px;">Loading full resolution image...</div>';
+
+      // Preload image
+      const preloadImg = new Image();
+      preloadImg.onload = function () {
+        container.innerHTML = "";
+        img.src = src;
+        img.alt = formatZoneTitle(title);
+        container.appendChild(img);
+      };
+
+      preloadImg.onerror = function () {
+        container.innerHTML =
+          '<div style="color: red; text-align: center; font-size: 18px;">Error loading image</div>';
+      };
+
+      // Start loading
+      preloadImg.src = src;
+
+      // Show the fullscreen view
+      fullscreenView.classList.add("active");
+    }
+
+    // Close fullscreen view
+    function closeFullscreen() {
+      fullscreenView.classList.remove("active");
+    }
+
+    // Close button - add explicit handling to prevent accidental closes
+    closeButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      zoneModal.classList.remove("active");
+    });
+
+    // Close fullscreen button handler
+    closeFullscreenButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeFullscreen();
+    });
+
+    // Prevent closing when clicking inside the modal content
+    document
+      .querySelector(".modal-content")
+      .addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+
+    // Only close when clicking the background
+    zoneModal.addEventListener("click", function (e) {
+      if (e.target === this) {
+        zoneModal.classList.remove("active");
+      }
+    });
+
+    // Only close fullscreen when clicking the background
+    fullscreenView.addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeFullscreen();
+      }
+    });
+
+    // Navigation buttons
+    const prevButton = document.querySelector(".prev-button");
+    const nextButton = document.querySelector(".next-button");
+
+    // Default to hiding buttons - they'll be shown if needed
+    prevButton.style.display = "none";
+    nextButton.style.display = "none";
+
+    // Previous image button functionality
+    prevButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const sliderContainer = document.querySelector(".slider-container");
+      const zoneTitle = sliderContainer.dataset.zoneTitle;
+      let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
+      const images = zoneImageMap[zoneTitle] || [];
+
+      if (images.length > 1) {
+        // Calculate previous index with wraparound
+        currentIndex = (currentIndex - 1 + images.length) % images.length;
+        sliderContainer.dataset.currentIndex = currentIndex.toString();
+
+        // Show loading indicator
+        sliderContainer.innerHTML =
+          '<div style="text-align: center; padding: 20px;">Loading image...</div>';
+
+        // Preload the image
+        const preloadImg = new Image();
+        const newSrc = images[currentIndex];
+
+        preloadImg.onload = function () {
+          // Create and add the new image
+          const img = document.createElement("img");
+          img.src = newSrc;
+          img.alt = formatZoneTitle(zoneTitle);
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          sliderContainer.innerHTML = "";
+          sliderContainer.appendChild(img);
+          console.log("Previous image loaded successfully:", newSrc);
+
+          // Add click event to show fullscreen
+          img.addEventListener("click", function () {
+            showFullscreen(newSrc, zoneTitle);
+          });
+        };
+
+        preloadImg.onerror = function () {
+          console.error("Failed to load previous image:", newSrc);
+          const img = document.createElement("img");
+          img.src =
+            "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+          img.alt = "Error loading image";
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          sliderContainer.innerHTML = "";
+          sliderContainer.appendChild(img);
+        };
+
+        // Start loading the image
+        preloadImg.src = newSrc;
+      }
+    });
+
+    // Next image button functionality
+    nextButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const sliderContainer = document.querySelector(".slider-container");
+      const zoneTitle = sliderContainer.dataset.zoneTitle;
+      let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
+      const images = zoneImageMap[zoneTitle] || [];
+
+      if (images.length > 1) {
+        // Calculate next index with wraparound
+        currentIndex = (currentIndex + 1) % images.length;
+        sliderContainer.dataset.currentIndex = currentIndex.toString();
+
+        // Show loading indicator
+        sliderContainer.innerHTML =
+          '<div style="text-align: center; padding: 20px;">Loading image...</div>';
+
+        // Preload the image
+        const preloadImg = new Image();
+        const newSrc = images[currentIndex];
+
+        preloadImg.onload = function () {
+          // Create and add the new image
+          const img = document.createElement("img");
+          img.src = newSrc;
+          img.alt = formatZoneTitle(zoneTitle);
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          sliderContainer.innerHTML = "";
+          sliderContainer.appendChild(img);
+          console.log("Next image loaded successfully:", newSrc);
+
+          // Add click event to show fullscreen
+          img.addEventListener("click", function () {
+            showFullscreen(newSrc, zoneTitle);
+          });
+        };
+
+        preloadImg.onerror = function () {
+          console.error("Failed to load next image:", newSrc);
+          const img = document.createElement("img");
+          img.src =
+            "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
+          img.alt = "Error loading image";
+          img.className = "active";
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "60vh";
+          img.style.display = "block";
+          img.style.margin = "0 auto";
+
+          sliderContainer.innerHTML = "";
+          sliderContainer.appendChild(img);
+        };
+
+        // Start loading the image
+        preloadImg.src = newSrc;
+      }
+    });
+
+    // Close modal when ESC key is pressed
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        if (fullscreenView.classList.contains("active")) {
+          closeFullscreen();
+        } else if (zoneModal.classList.contains("active")) {
+          zoneModal.classList.remove("active");
+        }
+      }
+    });
+
+    // Update initial overlay opacity after a delay
+    setTimeout(() => {
+      if (initialOverlay) {
+        initialOverlay.style.opacity = "1";
+      }
+    }, 500);
   });
 </script>
