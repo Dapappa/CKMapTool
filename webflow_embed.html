@@ -674,29 +674,68 @@
       // Clear existing highlights
       if (highlightsContainer) {
         highlightsContainer.innerHTML = "";
+      } else {
+        console.warn("No highlights container found");
+        return;
+      }
+
+      // Ensure map is loaded
+      if (!mapImage || !mapImage.complete) {
+        if (debugMode) {
+          console.warn("Cannot create highlights: Map not loaded");
+        }
+        return;
       }
 
       // Get current map dimensions
       const mapWidth = mapImage.offsetWidth;
       const mapHeight = mapImage.offsetHeight;
 
-      // Create SVG container for the highlights
+      if (mapWidth === 0 || mapHeight === 0) {
+        if (debugMode) {
+          console.warn("Cannot create highlights: Map has zero dimensions");
+        }
+        return;
+      }
+
+      // Create SVG container for the highlights with explicit namespace
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.setAttribute("class", "map-highlights");
       svg.setAttribute("width", mapWidth);
       svg.setAttribute("height", mapHeight);
+      svg.setAttribute("viewBox", `0 0 ${mapWidth} ${mapHeight}`);
       svg.style.position = "absolute";
       svg.style.top = "0";
       svg.style.left = "0";
       svg.style.width = "100%";
       svg.style.height = "100%";
       svg.style.pointerEvents = "none"; // Make sure it doesn't interfere with clicks
+      svg.style.zIndex = "3"; // Ensure it's above the map but below UI elements
+
+      // Add the SVG to the container
       highlightsContainer.appendChild(svg);
 
-      // Process each zone
+      // Make sure the highlights container has the right positioning
+      highlightsContainer.style.position = "absolute";
+      highlightsContainer.style.top = "0";
+      highlightsContainer.style.left = "0";
+      highlightsContainer.style.width = "100%";
+      highlightsContainer.style.height = "100%";
+      highlightsContainer.style.pointerEvents = "none";
+      highlightsContainer.style.zIndex = "3";
+
+      if (debugMode) {
+        console.log("Created SVG container for highlights:", {
+          width: mapWidth,
+          height: mapHeight,
+          container: highlightsContainer,
+        });
+      }
+
+      // Process each zone to create highlight polygons
       allZones.forEach((zone, index) => {
         if (zone.shape === "poly") {
-          // Create polygon highlight
+          // Create polygon highlight with explicit namespace
           const polygon = document.createElementNS(
             "http://www.w3.org/2000/svg",
             "polygon"
@@ -711,37 +750,47 @@
           polygon.setAttribute("fill-opacity", "0");
           polygon.setAttribute("stroke-opacity", "0");
 
+          // Add to SVG
           svg.appendChild(polygon);
+
+          if (debugMode) {
+            console.log("Created highlight for zone:", zone.title);
+          }
         }
       });
 
-      // Update area highlights with current dimensions
+      // Update polygon points based on current dimensions
       updateAreaHighlights();
     }
 
     // Update area highlights based on current dimensions
     function updateAreaHighlights() {
-      if (!mapImage || !mapImage.complete) return;
+      if (!mapImage || !mapImage.complete) {
+        if (debugMode) {
+          console.warn("Cannot update highlights: Map not fully loaded");
+        }
+        return;
+      }
 
       // Get current map dimensions
       const mapWidth = mapImage.offsetWidth;
       const mapHeight = mapImage.offsetHeight;
 
-      // Original map dimensions (SVG viewBox or natural size)
-      const originalWidth = mapImage.naturalWidth;
-      const originalHeight = mapImage.naturalHeight;
+      // Get SVG viewBox dimensions (from the SVG file)
+      const svgViewBoxWidth = 792; // From SVG viewBox attribute
+      const svgViewBoxHeight = 1224; // From SVG viewBox attribute
 
       if (
         mapWidth === 0 ||
         mapHeight === 0 ||
-        originalWidth === 0 ||
-        originalHeight === 0
+        svgViewBoxWidth === 0 ||
+        svgViewBoxHeight === 0
       ) {
         console.warn("Cannot update highlights: Invalid dimensions", {
           mapWidth,
           mapHeight,
-          originalWidth,
-          originalHeight,
+          svgViewBoxWidth,
+          svgViewBoxHeight,
         });
         return;
       }
@@ -751,11 +800,18 @@
       if (svg) {
         svg.setAttribute("width", mapWidth);
         svg.setAttribute("height", mapHeight);
+
+        // Ensure SVG fills the container
+        svg.style.width = "100%";
+        svg.style.height = "100%";
+        svg.style.position = "absolute";
+        svg.style.top = "0";
+        svg.style.left = "0";
       }
 
-      // Calculate scale factors - use the minimum scale to maintain aspect ratio
-      const scaleX = mapWidth / originalWidth;
-      const scaleY = mapHeight / originalHeight;
+      // Calculate scale factors based on SVG viewBox
+      const scaleX = mapWidth / svgViewBoxWidth;
+      const scaleY = mapHeight / svgViewBoxHeight;
 
       if (debugMode) {
         console.log("Updating area highlights with scale factors:", {
@@ -763,8 +819,8 @@
           scaleY,
           mapWidth,
           mapHeight,
-          originalWidth,
-          originalHeight,
+          svgViewBoxWidth,
+          svgViewBoxHeight,
         });
       }
 
@@ -776,7 +832,7 @@
           );
           if (!polygon) return;
 
-          // Scale coordinates
+          // Scale coordinates based on SVG viewBox
           const scaledPoints = [];
           for (let i = 0; i < zone.coords.length; i += 2) {
             const x = zone.coords[i] * scaleX;
@@ -784,7 +840,21 @@
             scaledPoints.push(`${x},${y}`);
           }
 
+          // Update polygon points
           polygon.setAttribute("points", scaledPoints.join(" "));
+
+          // Ensure all styling attributes are explicitly set
+          polygon.setAttribute("fill", "rgba(255, 0, 0, 0.2)");
+          polygon.setAttribute("stroke", "#ff0000");
+          polygon.setAttribute("stroke-width", "3");
+          polygon.setAttribute(
+            "fill-opacity",
+            polygon.classList.contains("active") ? "0.6" : "0"
+          );
+          polygon.setAttribute(
+            "stroke-opacity",
+            polygon.classList.contains("active") ? "1" : "0"
+          );
         }
       });
     }
@@ -930,504 +1000,21 @@
     // Initialize the coordinates on load
     parseCoordinates();
 
-    // Check on load and resize
-    checkScreenSize();
-    window.addEventListener("resize", function () {
-      // Update mobile flag on resize
-      const wasMobile = isMobile;
-      const newIsMobile = window.innerWidth <= 768;
+    // Call main initialization - this properly loads the map
+    loadMapAndInitialize();
 
-      // Only do a full refresh if we're switching between mobile/desktop
-      if (wasMobile !== newIsMobile) {
-        location.reload(); // Simple refresh to update the UI correctly
-      } else {
-        checkScreenSize();
-
-        // Immediately update for smoother resizing
-        if (!newIsMobile) {
-          createAreaHighlights();
-        }
-
-        // Also do a timed update after resize ends
-        setTimeout(() => {
-          updateAreaHighlights();
-          if (debugMode) {
-            console.log("Window resized, dimensions:", {
-              windowWidth: window.innerWidth,
-              mapWidth: mapImage.offsetWidth,
-              mapHeight: mapImage.offsetHeight,
-            });
-          }
-        }, 100);
-      }
-    });
-
-    // Update area highlights when map loads
-    mapImage.addEventListener("load", function () {
-      console.log(
-        "Map image loaded - dimensions:",
-        mapImage.offsetWidth,
-        "x",
-        mapImage.offsetHeight
-      );
-      parseCoordinates();
-      updateAreaHighlights();
-    });
-
-    // Find which area was clicked based on coordinates
-    function findClickedArea(x, y) {
-      for (const area of areaCoordinates) {
-        if (area.shape === "poly") {
-          if (isPointInPoly({ x: x, y: y }, area.points)) {
-            return area;
-          }
-        } else if (area.shape === "circle") {
-          if (
-            isPointInCircle(
-              { x: x, y: y },
-              area.points[0],
-              area.points[1].radius
-            )
-          ) {
-            return area;
-          }
-        } else if (area.shape === "rect") {
-          if (isPointInRect({ x: x, y: y }, area.points[0], area.points[1])) {
-            return area;
-          }
-        }
-      }
-      return null;
-    }
-
-    // Handle direct click on the map image
-    mapImage.addEventListener("click", function (e) {
-      e.preventDefault();
-
-      // Get click coordinates relative to the image
-      const rect = mapImage.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
-
-      console.log(`Clicked at: ${clickX}, ${clickY}`);
-
-      // Find which area was clicked
-      const clickedArea = findClickedArea(clickX, clickY);
-
-      if (clickedArea) {
-        console.log("Clicked on area:", clickedArea.title);
-        // Remove the initial overlay after a click
-        fadeOutOverlay();
-        // Now show the modal with the appropriate images
-        showZoneModal(clickedArea.title);
-      } else {
-        console.log("No area clicked");
-      }
-    });
-
-    // Function to show the zone modal with images
-    function showZoneModal(zoneTitle) {
-      // Set modal title
-      document.querySelector(".modal-title").textContent =
-        formatZoneTitle(zoneTitle);
-
-      // Clear previous images
-      const sliderContainer = document.querySelector(".slider-container");
-      sliderContainer.innerHTML = "";
-
-      // Add images if available for this zone
-      if (zoneImageMap[zoneTitle]) {
-        const images = zoneImageMap[zoneTitle];
-
-        // Only proceed if we have images
-        if (images && images.length > 0) {
-          // Add first image
-          const img = document.createElement("img");
-          const imageSrc = images[0];
-
-          // Set these attributes before setting src to avoid FOUC (Flash of Unstyled Content)
-          img.alt = formatZoneTitle(zoneTitle);
-          img.className = "active";
-          img.style.maxWidth = "100%";
-          img.style.maxHeight = "60vh";
-          img.style.display = "block";
-          img.style.margin = "0 auto";
-
-          // Show a loading indicator while the image loads
-          sliderContainer.innerHTML =
-            '<div style="text-align: center; padding: 20px;">Loading image...</div>';
-
-          // Preload the image before showing
-          const preloadImg = new Image();
-          preloadImg.onload = function () {
-            // Replace loading indicator with actual image once loaded
-            sliderContainer.innerHTML = "";
-            img.src = imageSrc;
-            sliderContainer.appendChild(img);
-            console.log("✅ Image loaded successfully:", imageSrc);
-
-            // Add click event to show fullscreen
-            img.addEventListener("click", function () {
-              showFullscreen(imageSrc, zoneTitle);
-            });
-          };
-
-          preloadImg.onerror = function () {
-            console.error("❌ Failed to load image:", imageSrc);
-            sliderContainer.innerHTML = "";
-            img.src =
-              "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
-            sliderContainer.appendChild(img);
-          };
-
-          // Start loading the image
-          preloadImg.src = imageSrc;
-
-          // Store current image index and zone info
-          sliderContainer.dataset.currentIndex = "0";
-          sliderContainer.dataset.zoneTitle = zoneTitle;
-
-          // Show/hide navigation buttons based on number of images
-          const prevButton = document.querySelector(".prev-button");
-          const nextButton = document.querySelector(".next-button");
-
-          if (images.length > 1) {
-            prevButton.style.display = "block";
-            nextButton.style.display = "block";
-          } else {
-            prevButton.style.display = "none";
-            nextButton.style.display = "none";
-          }
-        }
-      }
-
-      // Show modal with a slight delay to ensure proper rendering
-      setTimeout(() => {
-        zoneModal.classList.add("active");
-      }, 50);
-    }
-
-    // Function to show fullscreen image
-    function showFullscreen(src, title) {
-      const container = document.querySelector(".fullscreen-image-container");
-      container.innerHTML = "";
-
-      // Create new image
-      const img = document.createElement("img");
-
-      // Show loading indicator
-      container.innerHTML =
-        '<div style="color: white; text-align: center; font-size: 18px;">Loading full resolution image...</div>';
-
-      // Preload image
-      const preloadImg = new Image();
-      preloadImg.onload = function () {
-        container.innerHTML = "";
-        img.src = src;
-        img.alt = formatZoneTitle(title);
-        container.appendChild(img);
-      };
-
-      preloadImg.onerror = function () {
-        container.innerHTML =
-          '<div style="color: red; text-align: center; font-size: 18px;">Error loading image</div>';
-      };
-
-      // Start loading
-      preloadImg.src = src;
-
-      // Show the fullscreen view
-      fullscreenView.classList.add("active");
-    }
-
-    // Close fullscreen view
-    function closeFullscreen() {
-      fullscreenView.classList.remove("active");
-    }
-
-    // Add click handlers to all areas as a fallback
-    areas.forEach((area) => {
-      area.addEventListener("click", function (e) {
-        e.preventDefault();
-        e.stopPropagation(); // Stop event propagation to prevent bubbling
-
-        // Get zone title from the area
-        const zoneTitle = this.getAttribute("title");
-        console.log("Fallback clicked zone:", zoneTitle);
-
-        // Fade out the overlay
-        fadeOutOverlay();
-
-        // Use the same function to show the modal
-        showZoneModal(zoneTitle);
-      });
-    });
-
-    // Function to fade out the initial overlay
-    function fadeOutOverlay() {
-      if (initialOverlay) {
-        initialOverlay.classList.add("fade-out");
-      }
-    }
-
-    // Automatically fade out the initial overlay after 5 seconds
-    setTimeout(fadeOutOverlay, 5000);
-
-    // Improve touch handling for mobile
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchMoved = false;
-    const touchThreshold = 10; // Threshold to detect if touch was a tap or a scroll
-
-    mapImage.addEventListener(
-      "touchstart",
-      function (e) {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        touchMoved = false;
-      },
-      { passive: true }
-    );
-
-    mapImage.addEventListener(
-      "touchmove",
-      function () {
-        touchMoved = true;
-      },
-      { passive: true }
-    );
-
-    mapImage.addEventListener("touchend", function (e) {
-      // Only consider it a tap if the touch didn't move much
-      if (
-        !touchMoved ||
-        (Math.abs(e.changedTouches[0].clientX - touchStartX) < touchThreshold &&
-          Math.abs(e.changedTouches[0].clientY - touchStartY) < touchThreshold)
-      ) {
-        e.preventDefault();
-
-        // Get touch coordinates relative to the image
-        const rect = mapImage.getBoundingClientRect();
-        const touchX = e.changedTouches[0].clientX - rect.left;
-        const touchY = e.changedTouches[0].clientY - rect.top;
-
-        console.log(`Touched at: ${touchX}, ${touchY}`);
-
-        // Find which area was touched
-        const touchedArea = findClickedArea(touchX, touchY);
-
-        if (touchedArea) {
-          console.log("Touched area:", touchedArea.title);
-          fadeOutOverlay();
-          showZoneModal(touchedArea.title);
-        } else {
-          console.log("No area touched");
-        }
-      }
-    });
-
-    // Close button - add explicit handling to prevent accidental closes
-    closeButton.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      zoneModal.classList.remove("active");
-    });
-
-    // Close fullscreen button handler
-    closeFullscreenButton.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      closeFullscreen();
-    });
-
-    // Prevent closing when clicking inside the modal content
-    document
-      .querySelector(".modal-content")
-      .addEventListener("click", function (e) {
-        e.stopPropagation();
-      });
-
-    // Only close when clicking the background
-    zoneModal.addEventListener("click", function (e) {
-      if (e.target === this) {
-        zoneModal.classList.remove("active");
-      }
-    });
-
-    // Only close fullscreen when clicking the background
-    fullscreenView.addEventListener("click", function (e) {
-      if (e.target === this) {
-        closeFullscreen();
-      }
-    });
-
-    // Navigation buttons
-    const prevButton = document.querySelector(".prev-button");
-    const nextButton = document.querySelector(".next-button");
-
-    // Default to hiding buttons - they'll be shown if needed
-    prevButton.style.display = "none";
-    nextButton.style.display = "none";
-
-    prevButton.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const sliderContainer = document.querySelector(".slider-container");
-      const zoneTitle = sliderContainer.dataset.zoneTitle;
-      let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
-      const images = zoneImageMap[zoneTitle] || [];
-
-      if (images.length > 1) {
-        // Calculate previous index with wraparound
-        currentIndex = (currentIndex - 1 + images.length) % images.length;
-        sliderContainer.dataset.currentIndex = currentIndex.toString();
-
-        // Show loading indicator
-        sliderContainer.innerHTML =
-          '<div style="text-align: center; padding: 20px;">Loading image...</div>';
-
-        // Preload the image
-        const preloadImg = new Image();
-        const newSrc = images[currentIndex];
-
-        preloadImg.onload = function () {
-          // Create and add the new image
-          const img = document.createElement("img");
-          img.src = newSrc;
-          img.alt = formatZoneTitle(zoneTitle);
-          img.className = "active";
-          img.style.maxWidth = "100%";
-          img.style.maxHeight = "60vh";
-          img.style.display = "block";
-          img.style.margin = "0 auto";
-
-          sliderContainer.innerHTML = "";
-          sliderContainer.appendChild(img);
-          console.log("Previous image loaded successfully:", newSrc);
-
-          // Add click event to show fullscreen
-          img.addEventListener("click", function () {
-            showFullscreen(newSrc, zoneTitle);
-          });
-        };
-
-        preloadImg.onerror = function () {
-          console.error("Failed to load previous image:", newSrc);
-          const img = document.createElement("img");
-          img.src =
-            "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
-          img.alt = "Error loading image";
-          img.className = "active";
-          img.style.maxWidth = "100%";
-          img.style.maxHeight = "60vh";
-          img.style.display = "block";
-          img.style.margin = "0 auto";
-
-          sliderContainer.innerHTML = "";
-          sliderContainer.appendChild(img);
-        };
-
-        // Start loading the image
-        preloadImg.src = newSrc;
-      }
-    });
-
-    nextButton.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const sliderContainer = document.querySelector(".slider-container");
-      const zoneTitle = sliderContainer.dataset.zoneTitle;
-      let currentIndex = parseInt(sliderContainer.dataset.currentIndex || 0);
-      const images = zoneImageMap[zoneTitle] || [];
-
-      if (images.length > 1) {
-        // Calculate next index with wraparound
-        currentIndex = (currentIndex + 1) % images.length;
-        sliderContainer.dataset.currentIndex = currentIndex.toString();
-
-        // Show loading indicator
-        sliderContainer.innerHTML =
-          '<div style="text-align: center; padding: 20px;">Loading image...</div>';
-
-        // Preload the image
-        const preloadImg = new Image();
-        const newSrc = images[currentIndex];
-
-        preloadImg.onload = function () {
-          // Create and add the new image
-          const img = document.createElement("img");
-          img.src = newSrc;
-          img.alt = formatZoneTitle(zoneTitle);
-          img.className = "active";
-          img.style.maxWidth = "100%";
-          img.style.maxHeight = "60vh";
-          img.style.display = "block";
-          img.style.margin = "0 auto";
-
-          sliderContainer.innerHTML = "";
-          sliderContainer.appendChild(img);
-          console.log("Next image loaded successfully:", newSrc);
-
-          // Add click event to show fullscreen
-          img.addEventListener("click", function () {
-            showFullscreen(newSrc, zoneTitle);
-          });
-        };
-
-        preloadImg.onerror = function () {
-          console.error("Failed to load next image:", newSrc);
-          const img = document.createElement("img");
-          img.src =
-            "data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Cpath fill%3D%22%23f44336%22 d%3D%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z%22%2F%3E%3C%2Fsvg%3E";
-          img.alt = "Error loading image";
-          img.className = "active";
-          img.style.maxWidth = "100%";
-          img.style.maxHeight = "60vh";
-          img.style.display = "block";
-          img.style.margin = "0 auto";
-
-          sliderContainer.innerHTML = "";
-          sliderContainer.appendChild(img);
-        };
-
-        // Start loading the image
-        preloadImg.src = newSrc;
-      }
-    });
-
-    // Close modal when ESC key is pressed
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") {
-        if (fullscreenView.classList.contains("active")) {
-          closeFullscreen();
-        } else if (zoneModal.classList.contains("active")) {
-          zoneModal.classList.remove("active");
-        }
-      }
-    });
-
-    // Update initial overlay opacity after a delay
+    // For browsers that might not trigger onload events correctly
     setTimeout(() => {
-      if (initialOverlay) {
-        initialOverlay.style.opacity = "1";
+      if (!window.mapInitialized) {
+        console.warn(
+          "Map initialization may have failed, forcing initialization"
+        );
+        loadMapAndInitialize();
       }
-    }, 500);
-
-    // Load a mobile-optimized SVG if on small screens
-    function checkScreenSize() {
-      // We're using the same SVG for both mobile and desktop
-      // Just checking if we're on mobile for other UI adjustments
-      const isMobileView = window.innerWidth < 768;
-
-      if (isMobileView) {
-        console.log("Mobile view detected - using responsive layout");
-      }
-    }
+    }, 1000);
 
     window.mapInitialized = true;
-    console.log("Map initialized successfully");
+    console.log("Map initialization process started");
 
     // Add click event to each zone button
     const zoneButtons = document.querySelectorAll(".mobile-zone-button");
